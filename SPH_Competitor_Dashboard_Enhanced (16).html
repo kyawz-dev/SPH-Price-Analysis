@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPH Competitor Price Dashboard 2027/2028</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  :root {
+    --sph-dark:#0F4C8A;--sph-mid:#1A6BC4;--sph-light:#EBF4FF;--sph-text:#0A3566;
+    --heat-high-bg:#FEE8E8;--heat-high-t:#9B1C1C;
+    --heat-mid-bg:#FEF9EE;--heat-mid-t:#6D4A00;
+    --heat-low-bg:#EDFAF2;--heat-low-t:#166534;
+    --heat-na-bg:#F3F4F6;--heat-na-t:#9CA3AF;
+    --bg:#F0F4FA;--surface:#FFFFFF;--border:rgba(15,76,138,0.10);
+    --text:#111827;--muted:#6B7280;--radius:14px;
+    --gold:#F59E0B;--gold-light:#FEF3C7;
+    --silver:#94A3B8;--silver-light:#F1F5F9;
+    --bronze:#D97706;--bronze-light:#FEF3C7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+
+  /* ── HEADER ─────────────────────────────── */
+  .header{
+    background:linear-gradient(135deg,#071E3D 0%,#0F4C8A 55%,#1A6BC4 100%);
+    padding:20px 40px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    position:relative;overflow:hidden;
+  }
+  .header::before{
+    content:'';position:absolute;top:-60px;right:-60px;
+    width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,0.06) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .header::after{
+    content:'';position:absolute;bottom:-80px;left:20%;
+    width:320px;height:160px;
+    background:radial-gradient(ellipse,rgba(26,107,196,0.4) 0%,transparent 70%);
+    pointer-events:none;
+  }
+  .header-logo{display:flex;align-items:center;gap:14px;}
+  .header-logo-mark{
+    width:42px;height:42px;border-radius:10px;
+    background:linear-gradient(135deg,#1A6BC4,#60A5FA);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;font-weight:800;color:#fff;letter-spacing:-1px;
+    box-shadow:0 4px 12px rgba(26,107,196,0.5);flex-shrink:0;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .header-title{font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.3px;line-height:1.2;}
+  .header-sub{font-size:12px;color:rgba(255,255,255,0.50);margin-top:3px;font-weight:400;}
+  .header-right{display:flex;align-items:center;gap:16px;position:relative;z-index:1;}
+  .header-badge{
+    background:rgba(255,255,255,0.10);color:rgba(255,255,255,0.85);
+    font-size:11px;padding:5px 14px;border-radius:99px;
+    border:1px solid rgba(255,255,255,0.18);font-weight:500;letter-spacing:0.03em;
+  }
+  .header-year{
+    font-size:32px;font-weight:700;
+    background:linear-gradient(135deg,rgba(255,255,255,0.15),rgba(255,255,255,0.05));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    font-family:'JetBrains Mono',monospace;letter-spacing:-2px;
+  }
+
+  /* ── UPLOAD BAR ──────────────────────────── */
+  .upload-bar{
+    background:#0D1B2E;border-bottom:1px solid rgba(96,165,250,0.15);
+    padding:10px 40px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .upload-btn{
+    background:linear-gradient(135deg,#1A6BC4,#2D8AE8);color:#fff;border:none;
+    padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;
+    cursor:pointer;font-family:inherit;transition:all 0.2s;
+    display:flex;align-items:center;gap:8px;
+    box-shadow:0 2px 8px rgba(26,107,196,0.4);
+  }
+  .upload-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(26,107,196,0.5);}
+  .upload-status{font-size:12px;color:#64748B;display:flex;align-items:center;gap:8px;}
+  .upload-status.success{color:#4ADE80;}
+  .upload-status.error{color:#F87171;}
+  .upload-status.loading{color:#FDE047;}
+  .upload-hint{font-size:11px;color:#334155;}
+  .file-input{display:none;}
+  .upload-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .loading .upload-dot{animation:pulse 1.2s infinite;}
+
+  /* ── CONTROLS ────────────────────────────── */
+  .controls{
+    background:var(--surface);border-bottom:1px solid var(--border);
+    padding:12px 40px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;
+    box-shadow:0 2px 12px rgba(15,76,138,0.06);position:sticky;top:0;z-index:50;
+  }
+  .ctrl-group{display:flex;flex-direction:column;gap:5px;}
+  .ctrl-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;}
+  .tab-row{display:flex;gap:4px;}
+  .tab{
+    font-size:13px;padding:6px 15px;border-radius:8px;
+    border:1px solid var(--border);background:transparent;color:var(--muted);
+    cursor:pointer;transition:all 0.15s;font-family:inherit;font-weight:500;
+  }
+  .tab:hover{border-color:var(--sph-dark);color:var(--sph-dark);background:var(--sph-light);}
+  .tab.active{
+    background:var(--sph-dark);color:#fff;border-color:var(--sph-dark);
+    box-shadow:0 2px 8px rgba(15,76,138,0.35);font-weight:600;
+  }
+  .ctrl-divider{width:1px;height:36px;background:var(--border);}
+  .view-toggle{display:flex;gap:2px;background:#F3F7FD;border-radius:10px;padding:3px;border:1px solid var(--border);}
+  .view-btn{
+    font-size:12px;padding:5px 15px;border-radius:7px;border:none;
+    background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;
+    transition:all 0.15s;font-weight:500;
+  }
+  .view-btn.active{
+    background:var(--surface);color:var(--sph-dark);font-weight:700;
+    box-shadow:0 1px 6px rgba(0,0,0,0.10);
+  }
+
+  /* ── MAIN CONTENT ────────────────────────── */
+  .main{padding:24px 40px;max-width:1480px;margin:0 auto;}
+
+  /* ── KPI CARDS ───────────────────────────── */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px;}
+  .kpi{
+    background:var(--surface);border-radius:16px;padding:20px 22px;
+    border:1px solid var(--border);position:relative;overflow:hidden;
+    transition:transform 0.2s,box-shadow 0.2s;
+    box-shadow:0 1px 4px rgba(15,76,138,0.06);
+  }
+  .kpi:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,76,138,0.12);}
+  .kpi::after{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;
+    background:var(--sph-light);
+  }
+  .kpi-label{font-size:10px;color:rgba(255,255,255,0.75);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;}
+  .kpi-value{font-size:30px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;letter-spacing:-1.5px;line-height:1;}
+  .kpi-sub{font-size:12px;margin-top:7px;color:rgba(255,255,255,0.75);font-weight:400;}
+  .kpi-icon{font-size:32px;position:absolute;right:16px;top:50%;transform:translateY(-50%);opacity:0.18;}
+  .kpi.kpi-blue{background:linear-gradient(140deg,#0F4C8A,#1A6BC4);border:none;box-shadow:0 4px 16px rgba(15,76,138,0.30);}
+  .kpi.kpi-blue::after{background:rgba(255,255,255,0.2);}
+  .kpi.kpi-pink{background:linear-gradient(140deg,#BE185D,#EC4899);border:none;box-shadow:0 4px 16px rgba(190,24,93,0.25);}
+  .kpi.kpi-pink::after{background:rgba(255,255,255,0.2);}
+  .kpi.kpi-teal{background:linear-gradient(140deg,#065F46,#059669);border:none;box-shadow:0 4px 16px rgba(6,95,70,0.25);}
+  .kpi.kpi-teal::after{background:rgba(255,255,255,0.2);}
+  .kpi.kpi-amber{background:linear-gradient(140deg,#92400E,#D97706);border:none;box-shadow:0 4px 16px rgba(146,64,14,0.25);}
+  .kpi.kpi-amber::after{background:rgba(255,255,255,0.2);}
+  .kpi.kpi-purple{background:linear-gradient(140deg,#4C1D95,#7C3AED);border:none;box-shadow:0 4px 16px rgba(76,29,149,0.25);}
+  .kpi.kpi-purple::after{background:rgba(255,255,255,0.2);}
+
+  /* ── PANELS ──────────────────────────────── */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .panel{
+    background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);
+    padding:22px;box-shadow:0 1px 4px rgba(15,76,138,0.05);
+  }
+  .panel-title{
+    font-size:11px;font-weight:800;color:var(--sph-dark);text-transform:uppercase;
+    letter-spacing:0.09em;margin-bottom:16px;display:flex;align-items:center;gap:9px;
+  }
+  .panel-title::before{
+    content:'';width:3px;height:14px;
+    background:linear-gradient(to bottom,var(--sph-mid),var(--sph-dark));
+    border-radius:3px;flex-shrink:0;
+  }
+
+  /* ── TABLES ──────────────────────────────── */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    font-size:10px;font-weight:700;color:var(--muted);text-align:right;
+    padding:9px 10px;border-bottom:2px solid var(--bg);background:#FAFBFE;
+    letter-spacing:0.04em;text-transform:uppercase;
+  }
+  th:first-child{text-align:left;}
+  td{
+    padding:10px 12px;text-align:right;border-bottom:1px solid var(--bg);
+    color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;
+    transition:background 0.12s;
+  }
+  td:first-child{text-align:left;font-family:'Outfit',sans-serif;font-weight:600;font-size:13px;}
+  tr.sph-row td{background:var(--sph-light);color:var(--sph-text);font-weight:700;}
+  tr.avg-row td{color:var(--muted);font-style:italic;background:#FAFBFE;font-size:11px;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#F5F8FF;}
+  tr.sph-row:hover td{background:#D6ECFF;}
+  .h-sph{background:var(--sph-dark)!important;color:#fff!important;font-weight:800!important;border-radius:6px;font-size:13px!important;}
+  .h-high{background:var(--heat-high-bg)!important;color:var(--heat-high-t)!important;border-radius:6px;font-weight:700!important;border:1px solid rgba(163,45,45,0.15)!important;}
+  .h-mid{background:var(--heat-mid-bg)!important;color:var(--heat-mid-t)!important;border-radius:6px;font-weight:700!important;border:1px solid rgba(109,74,0,0.12)!important;}
+  .h-low{background:var(--heat-low-bg)!important;color:var(--heat-low-t)!important;border-radius:6px;font-weight:700!important;border:1px solid rgba(22,101,52,0.12)!important;}
+  .h-na{background:var(--heat-na-bg)!important;color:var(--heat-na-t)!important;border-radius:6px;font-style:italic;}
+
+  /* ── LEGENDS ─────────────────────────────── */
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+  .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+  .heat-legend{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
+  .heat-pill{font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600;}
+  .chart-wrap{position:relative;width:100%;}
+  .scatter-area{position:relative;height:220px;border-left:1px solid var(--border);border-bottom:1px solid var(--border);margin:10px 10px 24px 44px;background:linear-gradient(180deg,rgba(15,76,138,0.02) 0%,transparent 100%);border-radius:0 0 4px 0;}
+  .scatter-dot{position:absolute;border-radius:50%;transform:translate(-50%,50%);transition:transform 0.2s;cursor:pointer;}
+  .scatter-dot:hover{transform:translate(-50%,50%) scale(1.4);}
+  .scatter-label{position:absolute;font-size:10px;white-space:nowrap;transform:translate(0,50%);}
+  .scatter-axis-x{position:absolute;bottom:-18px;font-size:10px;color:var(--muted);}
+  .scatter-axis-y{position:absolute;left:-40px;font-size:10px;color:var(--muted);writing-mode:vertical-rl;top:50%;transform:translateY(-50%) rotate(180deg);}
+
+  /* ── INSIGHT PILLS ───────────────────────── */
+  .insight-box{
+    margin-top:12px;font-size:12px;color:var(--muted);
+    background:linear-gradient(135deg,#F8FAFE,#F0F4FA);
+    border-radius:10px;padding:11px 15px;line-height:1.7;
+    border-left:3px solid var(--sph-mid);
+  }
+
+  /* ── LEADERBOARD ─────────────────────────── */
+  .lb-wrap{padding:4px 0;}
+  .lb-sort-row{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+  .lb-sort-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:4px;}
+  .lb-sort-btn{
+    font-size:12px;padding:5px 14px;border-radius:8px;
+    border:1px solid var(--border);background:transparent;color:var(--muted);
+    cursor:pointer;font-family:inherit;transition:all 0.15s;font-weight:500;
+  }
+  .lb-sort-btn:hover{border-color:var(--sph-dark);color:var(--sph-dark);}
+  .lb-sort-btn.active{background:var(--sph-dark);color:#fff;border-color:var(--sph-dark);}
+  .lb-row{
+    display:flex;align-items:center;gap:14px;padding:13px 16px;
+    border-radius:12px;margin-bottom:8px;
+    border:1px solid transparent;transition:all 0.18s;
+    background:var(--surface);
+    cursor:default;
+    position:relative;overflow:hidden;
+  }
+  .lb-row::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;
+    background:var(--lb-accent,#E5E7EB);
+  }
+  .lb-row:hover{border-color:var(--border);box-shadow:0 2px 10px rgba(15,76,138,0.08);transform:translateX(2px);}
+  .lb-row.lb-sph{
+    background:linear-gradient(135deg,#EBF4FF,#F0F8FF);
+    border-color:rgba(15,76,138,0.20);
+    --lb-accent:var(--sph-dark);
+  }
+  .lb-row.lb-sph:hover{box-shadow:0 4px 14px rgba(15,76,138,0.15);}
+  .lb-rank{
+    font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+    color:var(--muted);min-width:28px;text-align:center;flex-shrink:0;
+  }
+  .lb-medal{font-size:20px;flex-shrink:0;min-width:28px;text-align:center;}
+  .lb-name{flex:1;min-width:0;}
+  .lb-school{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lb-tag{
+    display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;
+    font-weight:700;margin-top:3px;letter-spacing:0.04em;
+  }
+  .lb-tag-sph{background:var(--sph-light);color:var(--sph-dark);}
+  .lb-tag-hi{background:var(--heat-high-bg);color:var(--heat-high-t);}
+  .lb-tag-mid{background:var(--heat-mid-bg);color:var(--heat-mid-t);}
+  .lb-tag-lo{background:var(--heat-low-bg);color:var(--heat-low-t);}
+  .lb-bar-wrap{flex:0 0 160px;position:relative;}
+  .lb-bar-bg{height:8px;background:#F3F4F6;border-radius:99px;overflow:hidden;}
+  .lb-bar-fill{height:100%;border-radius:99px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);}
+  .lb-fee{
+    font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+    color:var(--text);min-width:72px;text-align:right;flex-shrink:0;
+  }
+  .lb-delta{
+    font-size:11px;font-weight:700;min-width:58px;text-align:right;
+    padding:3px 8px;border-radius:6px;flex-shrink:0;
+  }
+  .lb-delta-hi{background:var(--heat-high-bg);color:var(--heat-high-t);}
+  .lb-delta-mid{background:var(--heat-mid-bg);color:var(--heat-mid-t);}
+  .lb-delta-lo{background:var(--heat-low-bg);color:var(--heat-low-t);}
+  .lb-delta-eq{background:#F3F4F6;color:#6B7280;}
+  .lb-delta-na{background:#F3F4F6;color:#9CA3AF;font-style:italic;}
+
+  /* Leaderboard section header */
+  .lb-section-header{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:12px;flex-wrap:wrap;gap:8px;
+  }
+  .lb-context-pill{
+    font-size:11px;padding:4px 12px;border-radius:99px;
+    background:var(--sph-light);color:var(--sph-dark);font-weight:600;
+  }
+
+  /* ── MAP STYLES ──────────────────────────── */
+  #view-map{display:none;}
+  #map-container{height:580px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);position:relative;background:#e8f0e8;cursor:grab;}
+  #map-container:active{cursor:grabbing;}
+  #map-canvas{display:block;width:100%;height:100%;}
+  .map-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:12px;color:var(--muted);}
+  .map-legend-dot{width:13px;height:13px;border-radius:50%;display:inline-block;flex-shrink:0;border:2px solid rgba(0,0,0,0.15);}
+  .map-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .map-filter-btn{font-size:12px;padding:5px 14px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.15s;font-family:inherit;}
+  .map-filter-btn:hover{border-color:var(--sph-dark);color:var(--sph-dark);}
+  .map-filter-btn.active{background:var(--sph-dark);color:#fff;border-color:var(--sph-dark);}
+  .dist-table-wrap{overflow-x:auto;margin-top:16px;}
+  .dist-table-wrap table{min-width:500px;}
+  .map-zoom-ctrl{position:absolute;top:12px;left:12px;z-index:10;display:flex;flex-direction:column;gap:2px;}
+  .map-zoom-btn{width:30px;height:30px;background:#fff;border:1px solid #ccc;border-radius:4px;font-size:18px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333;box-shadow:0 1px 4px rgba(0,0,0,0.15);font-family:inherit;}
+  .map-zoom-btn:hover{background:#f5f5f5;}
+  #map-tooltip{position:absolute;background:rgba(10,15,30,0.94);color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;pointer-events:none;display:none;z-index:20;max-width:200px;line-height:1.6;box-shadow:0 6px 20px rgba(0,0,0,0.3);}
+  .popup-name{font-weight:700;font-size:14px;margin-bottom:4px;}
+  .popup-campus{font-size:11px;color:#60A5FA;font-weight:700;margin-bottom:6px;}
+  .popup-row{font-size:12px;color:#CBD5E1;margin-bottom:2px;}
+  .popup-dist{font-size:12px;color:#60A5FA;font-weight:700;margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px;}
+  /* Google Maps style popup */
+  .sph-popup .leaflet-popup-content-wrapper{border-radius:14px;padding:0;box-shadow:0 8px 30px rgba(0,0,0,0.18);border:1px solid rgba(0,0,0,0.06);}
+  .sph-popup .leaflet-popup-content{margin:14px;}
+
+  #view-b{display:none;}
+  #view-leaderboard{display:none;}
+
+  @keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .lb-row{animation:fadeSlideIn 0.3s ease both;}
+
+  @media(max-width:900px){
+    .grid2{grid-template-columns:1fr;}
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .main{padding:16px;}
+    .controls{padding:12px 16px;gap:14px;}
+    .header{padding:16px 20px;}
+    .lb-bar-wrap{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-logo">
+    <div class="header-logo-mark">SP</div>
+    <div>
+      <div class="header-title">SPH Competitor Price Dashboard</div>
+      <div class="header-sub">Academic year 2027/2028 · All prices in IDR (juta)</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">Marketing Division · Confidential</div>
+    <div class="header-year">2027/28</div>
+  </div>
+</div>
+
+<div class="upload-bar">
+  <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Excel
+  </button>
+  <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+  <button onclick="clearSavedData()" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#94A3B8;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(248,113,113,0.5)';this.style.color='#F87171'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='#94A3B8'">
+    ↺ Reset to defaults
+  </button>
+  <div class="upload-status" id="uploadStatus">
+    <span class="upload-dot"></span>
+    <span>Using built-in data — upload your Excel to update</span>
+  </div>
+  <div class="upload-hint">Supports LV · SC · LC · KV · PV sheets · New competitors detected automatically</div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <div class="ctrl-label">View</div>
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="setView('a',this)">Single campus</button>
+      <button class="view-btn" onclick="setView('b',this)">All SPH</button>
+      <button class="view-btn" onclick="setView('leaderboard',this)">🏆 Rankings</button>
+      <button class="view-btn" onclick="setView('map',this)">📍 Map</button>
+    </div>
+  </div>
+  <div class="ctrl-divider"></div>
+  <div class="ctrl-group" id="campus-ctrl">
+    <div class="ctrl-label">Campus</div>
+    <div class="tab-row">
+      <button class="tab active" onclick="setCampus('LV',this)">LV</button>
+      <button class="tab" onclick="setCampus('SC',this)">SC</button>
+      <button class="tab" onclick="setCampus('LC',this)">LC</button>
+      <button class="tab" onclick="setCampus('KV',this)">KV</button>
+      <button class="tab" onclick="setCampus('PV',this)">PV</button>
+    </div>
+  </div>
+  <div class="ctrl-divider"></div>
+  <div class="ctrl-group" id="level-ctrl">
+    <div class="ctrl-label">Level</div>
+    <div class="tab-row">
+      <button class="tab active" onclick="setLevel('KINDY',this)">Kindy</button>
+      <button class="tab" onclick="setLevel('JS',this)">Junior School</button>
+      <button class="tab" onclick="setLevel('MSSS',this)">Mid–Senior</button>
+    </div>
+  </div>
+</div>
+<div class="main">
+<div id="view-a">
+  <div class="kpi-row" id="kpi-row"></div>
+  <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px;">
+    <div class="panel">
+      <div class="panel-title">Fee comparison by grade</div>
+      <div id="grade-table"></div>
+      <div class="heat-legend">
+        <span class="heat-pill" style="background:var(--sph-light);color:var(--sph-text);">SPH campus</span>
+        <span class="heat-pill" style="background:var(--heat-high-bg);color:var(--heat-high-t);">High &gt;300 jt</span>
+        <span class="heat-pill" style="background:var(--heat-mid-bg);color:var(--heat-mid-t);">Mid 100–300 jt</span>
+        <span class="heat-pill" style="background:var(--heat-low-bg);color:var(--heat-low-t);">Low &lt;100 jt</span>
+        <span class="heat-pill" style="background:var(--heat-na-bg);color:var(--heat-na-t);">N/A</span>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:0;">
+      <div class="panel-title">Average fee by school</div>
+      <div class="legend">
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:var(--sph-dark);"></span>SPH</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#B5D4F4;"></span>Competitors</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#E24B4A;border-radius:0;height:2px;width:16px;"></span>Market avg</span>
+      </div>
+      <div class="chart-wrap" style="height:320px;position:relative;"><canvas id="barChart"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">Price gap vs SPH — by grade</div>
+      <div class="legend" style="margin-bottom:10px;">
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><span style="width:10px;height:3px;background:#E24B4A;display:inline-block;border-radius:2px;"></span>More expensive than SPH</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><span style="width:10px;height:3px;background:#22C55E;display:inline-block;border-radius:2px;"></span>Cheaper than SPH</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><span style="width:10px;height:3px;background:#94A3B8;display:inline-block;border-radius:2px;border:1px dashed #94A3B8;"></span>SPH baseline (0%)</span>
+      </div>
+      <div class="chart-wrap" style="height:240px;position:relative;"><canvas id="gapChart"></canvas></div>
+      <div id="gap-insight" class="insight-box"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Market positioning — avg fee</div>
+      <div class="scatter-area" id="scatter-area">
+        <span class="scatter-axis-y">Spread</span>
+        <span class="scatter-axis-x" style="left:0;">Lower price</span>
+        <span class="scatter-axis-x" style="right:0;">Higher price</span>
+      </div>
+      <div class="heat-legend" style="margin-top:0;">
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><span style="width:10px;height:10px;border-radius:50%;background:var(--sph-dark);display:inline-block;"></span>SPH</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><span style="width:10px;height:10px;border-radius:50%;background:#E24B4A;display:inline-block;"></span>Premium &gt;300 jt</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);"><span style="width:10px;height:10px;border-radius:50%;background:#B5D4F4;display:inline-block;"></span>Others</span>
+      </div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-bottom:16px;">
+    <div class="panel">
+      <div class="panel-title">Year-over-year price trend — SPH vs market avg</div>
+      <div class="legend">
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#0F4C8A;"></span>SPH campus</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#E24B4A;border-radius:0;height:2px;width:16px;border-top:2px dashed #E24B4A;"></span>Market avg (current competitors)</span>
+      </div>
+      <div class="chart-wrap" style="height:200px;position:relative;"><canvas id="yoyChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">SPH avg fee — year over year % change</div>
+      <div class="legend">
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#C0392B;"></span>High increase (&gt;7%)</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#185FA5;"></span>Mid increase (3–7%)</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#378ADD;"></span>Low increase (&lt;3%)</span>
+      </div>
+      <div class="chart-wrap" style="height:200px;position:relative;"><canvas id="yoyPctChart"></canvas></div>
+      <div id="yoy-insight" class="insight-box"></div>
+    </div>
+  </div>
+  <!-- Mini Campus Map -->
+  <div class="panel" style="margin-bottom:16px;" id="mini-map-panel">
+    <div class="panel-title" id="mini-map-title">Campus location &amp; nearby competitors</div>
+    <div id="mini-map" style="height:420px;border-radius:10px;overflow:hidden;border:1px solid var(--border);"></div>
+  </div>
+</div>
+<div id="view-b">
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-title">All campuses — SPH avg fee by level</div>
+    <div class="legend">
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#185FA5;"></span>Kindy</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#378ADD;"></span>Junior School</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#85B7EB;"></span>Mid–Senior</span>
+    </div>
+    <div class="chart-wrap" style="height:240px;position:relative;"><canvas id="allCampusChart"></canvas></div>
+  </div>
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-title">SPH fee by grade — 2026/27 actual prices</div>
+    <div class="legend">
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#185FA5;"></span>LV</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#27AE60;"></span>SC</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#E67E22;"></span>LC</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#8E44AD;"></span>KV</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span class="legend-dot" style="background:#E24B4A;"></span>PV</span>
+    </div>
+    <div class="chart-wrap" style="height:480px;position:relative;"><canvas id="gradePrice2627Chart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">SPH campus fee summary</div>
+    <div id="all-campus-table"></div>
+  </div>
+</div>
+
+<!-- MAP VIEW -->
+<div id="view-map">
+  <div class="panel" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div class="panel-title" style="margin-bottom:0;">Campus & Competitor Locations — Greater Jakarta Area</div>
+      <button onclick="toggleAddSchool()" id="addSchoolBtn" style="background:linear-gradient(135deg,#0F4C8A,#1A6BC4);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(15,76,138,0.35);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Find a School
+      </button>
+    </div>
+    <!-- Find School Panel -->
+    <div id="addSchoolPanel" style="display:none;background:linear-gradient(135deg,#F0F4FA,#EBF4FF);border:1px solid rgba(15,76,138,0.15);border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#0F4C8A;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        FIND ANY SCHOOL ON MAP
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="flex:2;min-width:200px;">
+          <div style="font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">School Name or Address</div>
+          <input id="newSchoolName" placeholder="e.g. Binus School Simprug, Jakarta" style="width:100%;padding:8px 12px;border:1px solid rgba(15,76,138,0.2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#111;" onfocus="this.style.borderColor='#0F4C8A'" onblur="this.style.borderColor='rgba(15,76,138,0.2)'" onkeydown="if(event.key==='Enter')searchSchool()"/>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:transparent;margin-bottom:4px;">.</div>
+          <button onclick="searchSchool()" style="background:linear-gradient(135deg,#0F4C8A,#1A6BC4);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;box-shadow:0 2px 8px rgba(15,76,138,0.35);">
+            Search
+          </button>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:transparent;margin-bottom:4px;">.</div>
+          <button onclick="clearSearch()" style="background:transparent;border:1px solid rgba(15,76,138,0.2);color:#6B7280;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">Clear</button>
+        </div>
+      </div>
+      <div id="searchStatus" style="margin-top:10px;font-size:12px;color:#6B7280;display:none;"></div>
+      <div id="searchResults" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+    <div class="map-legend">
+      <span style="display:flex;align-items:center;gap:6px;"><span class="map-legend-dot" style="background:#185FA5;"></span>SPH Campus</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span class="map-legend-dot" style="background:#E24B4A;"></span>Premium competitor (&gt;300 jt)</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span class="map-legend-dot" style="background:#F97316;"></span>Mid competitor (100–300 jt)</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span class="map-legend-dot" style="background:#22C55E;"></span>Low competitor (&lt;100 jt)</span>
+    </div>
+    <div class="map-filter-row">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Filter by nearest SPH campus:</span>
+      <button class="map-filter-btn active" onclick="filterMap('ALL',this)">All</button>
+      <button class="map-filter-btn" onclick="filterMap('LV',this)">LV</button>
+      <button class="map-filter-btn" onclick="filterMap('SC',this)">SC</button>
+      <button class="map-filter-btn" onclick="filterMap('LC',this)">LC</button>
+      <button class="map-filter-btn" onclick="filterMap('KV',this)">KV</button>
+      <button class="map-filter-btn" onclick="filterMap('PV',this)">PV</button>
+    </div>
+    <div id="map-container">
+      <canvas id="map-canvas"></canvas>
+      <div class="map-zoom-ctrl">
+        <button class="map-zoom-btn" onclick="mapZoom(1)">+</button>
+        <button class="map-zoom-btn" onclick="mapZoom(-1)">−</button>
+      </div>
+      <div id="map-tooltip"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Distance from SPH campuses to key competitors</div>
+    <div class="dist-table-wrap" id="dist-table"></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD VIEW -->
+<div id="view-leaderboard">
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="lb-section-header">
+      <div class="panel-title" style="margin-bottom:0;">Competitive Price Rankings</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="lb-context-pill" id="lb-context-pill">LV · Kindy · 2027/28</span>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+      All schools ranked by average annual fee. SPH campus highlighted in blue. Δ vs SPH shows how each school compares.
+    </p>
+    <div class="lb-sort-row">
+      <span class="lb-sort-label">Sort by:</span>
+      <button class="lb-sort-btn active" onclick="setLbSort('fee-desc',this)">Highest fee ↓</button>
+      <button class="lb-sort-btn" onclick="setLbSort('fee-asc',this)">Lowest fee ↑</button>
+      <button class="lb-sort-btn" onclick="setLbSort('delta-desc',this)">Most expensive vs SPH</button>
+      <button class="lb-sort-btn" onclick="setLbSort('delta-asc',this)">Cheapest vs SPH</button>
+    </div>
+    <div id="lb-list"></div>
+  </div>
+
+  <!-- Leaderboard summary stats -->
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">SPH market position</div>
+      <div id="lb-position-chart-wrap" style="height:320px;position:relative;"><canvas id="lbPositionChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Fee spread — all schools</div>
+      <div id="lb-spread-chart-wrap" style="height:320px;position:relative;"><canvas id="lbSpreadChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// Register Chart.js datalabels plugin globally
+if(typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+// ── DATA updated from Competitor_Summary_2728.xlsx ──────────────────────────
+const DATA={
+  LV:{
+    KINDY:{
+      grades:['K1','K2','K3'],
+      schools:['SPH LV','Kipina Gading Serpong','PlayField','iSmile','SPH PV','SWA','Wellington'],
+      prices:[[134,32,47.2,null,96,null,470],[134,38.4,54,156.2,96,null,470],[134,38.4,54,null,99,null,470]],
+      avgs:[134,36.27,51.73,156.2,97,null,470],
+      yoy:{sph:[113.0,119.0,121.0,134.0,134.0]},
+    },
+    JS:{
+      grades:['G1','G2','G3','G4','G5','G6'],
+      schools:['SPH LV','SWA','SPH PV','SDH LV','HOPE Academy','ILON Academy','ACS Jakarta BSD','Genesis Global','Tzu Chi'],
+      prices:[[214,164.4,140,34.65,105.6,72,254,63.5,78.6],[214,null,140,34.65,105.6,72,254,67.1,78.6],[223,null,148,34.65,112.2,72,254,70.7,78.6],[223,null,148,34.65,112.2,72,254,75.5,78.6],[223,null,148,34.65,115.2,76.5,254,80.3,78.6],[223,null,160,34.65,115.2,76.5,254,85.1,78.6]],
+      avgs:[220,164.4,147.33,34.65,111,73.5,254,73.7,78.6],
+      yoy:{sph:[185.3,194.3,204.0,220.0,220.0]},
+    },
+    MSSS:{
+      grades:['G7','G8','G9','G10','G11','G12'],
+      schools:['SPH LV','BSJ','JIS','IICS','BINUS Serpong','SIS PIK','Tunas Muda'],
+      prices:[[284,444,527.04,146.4,87,103,122],[284,444,527.04,146.4,87,103,122],[284,444,532.38,146.4,87,103,122],[319,444,532.38,173.52,90.6,100,130],[384,486.65,532.38,173.52,90.6,109,130],[384,499.06,532.38,null,90.6,109,130]],
+      avgs:[323.17,460.28,530.6,157.25,88.8,104.5,126],
+      yoy:{sph:[273.3,287.0,301.5,323.2,323.2]},
+    },
+  },
+  SC:{
+    KINDY:{
+      grades:['K1','K2','K3'],
+      schools:['SPH SC','Sampoerna Academy Sentul','Sekolah Bogor Raya','SDH Bogor','BPK Penabur Sentul','SDH Sentul','Intercultural School Bogor','Highscope Bogor','Kippina Kids','Scuola'],
+      prices:[[50,null,32.4,13.8,40.2,16.8,55,7.1,54,32.4],[53,null,40.8,15,40.2,18,55,7.1,62.4,38.4],[60,null,48,16.2,40.2,19.2,55,7.1,72,null]],
+      avgs:[54.33,null,40.4,15,40.2,18,55,7.1,62.8,35.4],
+      yoy:{sph:[57.2,60.0,53.0,54.3,54.3]},
+    },
+    JS:{
+      grades:['G1','G2','G3','G4','G5','G6'],
+      schools:['SPH SC','Sampoerna Academy Sentul','SBR','SDH Bogor','BPK Penabur Sentul','SDH Sentul','Intercultural School Bogor'],
+      prices:[[70,73.8,61.2,18.6,43.56,21,85],[70,73.8,61.2,18.6,43.56,21,85],[78,73.8,61.2,19.8,43.56,22.2,95],[88,73.8,61.2,19.8,43.56,22.2,95],[88,73.8,59.4,21,43.56,23.4,100],[93,73.8,59.4,21,43.56,23.4,null]],
+      avgs:[81.17,73.8,60.6,19.8,43.56,22.2,92],
+      yoy:{sph:[105.2,97.7,79.2,81.2,81.2]},
+    },
+    MSSS:{
+      grades:['G7','G8','G9','G10','G11','G12'],
+      schools:['SPH SC','Sampoerna Academy Sentul','Sekolah Bogor Raya','SDH Bogor','BPK Penabur Sentul','SDH Sentul'],
+      prices:[[125,93.6,84.42,25.8,48,28.2],[127,93.6,84.42,25.8,48,28.2],[127,98,84.42,25.8,48,28.2],[138,98,94.5,31.8,66,35.4],[145,112.5,96.41,31.8,66,35.4],[145,112.5,96.41,31.8,66,35.4]],
+      avgs:[134.5,101.37,90.1,28.8,57,31.8],
+      yoy:{sph:[185.1,185.1,131.5,134.5,134.5]},
+    },
+  },
+  LC:{
+    KINDY:{
+      grades:['K1','K2','K3'],
+      schools:['SPH LC','Three Little Angels','Caterpillars','Apple Tree'],
+      prices:[[92,20.196,29.9,27.6],[105,20.196,30.4,27.6],[105,20.196,30.9,27.6]],
+      avgs:[100.67,20.196,30.4,27.6],
+      yoy:{sph:[95.7,101.0,100.7,100.7,100.7]},
+    },
+    JS:{
+      grades:['G1','G2','G3','G4','G5','G6'],
+      schools:['SPH LC','SDH LC'],
+      prices:[[164,31.3],[164,31.3],[164,31.3],[164,31.3],[164,31.3],[164,31.3]],
+      avgs:[164,31.3],
+      yoy:{sph:[144.0,151.0,159.0,164.0,164.0]},
+    },
+    MSSS:{
+      grades:['G7','G8','G9','G10','G11','G12'],
+      schools:['SPH LC','SDH LC','JIKS','Charis Global School'],
+      prices:[[189,40.8,111.77,28.8],[189,40.8,111.77,28.8],[198,40.8,111.77,28.8],[198,34.8,116.73,null],[222,34.8,116.73,null],[222,34.8,116.73,null]],
+      avgs:[203,37.8,114.25,28.8],
+      yoy:{sph:[179.0,188.0,197.3,203.0,203.0]},
+    },
+  },
+  KV:{
+    KINDY:{
+      grades:['K1','K2','K3'],
+      schools:['SPH KV','ICA','Mighty Minds','Tutor Time','Ismile','SUKU Preschool','HEI School Senayan','Playhouse Academy','Kipina Kemang','Alam Atelier','Mindchamps','Julia Gabriel'],
+      prices:[[127,null,12.5,59.95,null,26,126,99,60,null,null,null],[131,null,91.5,59.95,null,28,null,99,72,null,null,null],[138,null,96,59.95,null,28,null,105,72,null,null,null]],
+      avgs:[132,null,66.67,59.95,null,27.33,126,101,68,null,null,null],
+      yoy:{sph:[107.8,114.3,125.7,132.0,132.0]},
+    },
+    JS:{
+      grades:['G1','G2','G3','G4','G5','G6'],
+      schools:['SPH KV','Nord Anglia','ACS','ACG','Global Jaya','JIS','BSJ','Mentari','AIS'],
+      prices:[[206,346.68,254,283.04,160.32,450.87,387.5,null,376.3],[219,351.23,254,288.25,160.32,450.87,387.5,null,386.45],[219,351.23,254,351.92,160.32,450.87,387.5,null,388.24],[219,351.23,254,351.92,160.32,450.87,387.5,null,388.24],[219,351.23,254,355.39,160.32,450.87,387.5,null,395.38],[270,351.23,254,358.86,160.32,527.04,444,null,401.27]],
+      avgs:[225.33,350.47,254,331.56,160.32,463.56,396.92,null,389.31],
+      yoy:{sph:[185.3,202.2,214.2,225.3,225.3]},
+    },
+    MSSS:{
+      grades:['G7','G8','G9','G10','G11','G12'],
+      schools:['SPH KV','JIS','BSJ','ACS','SPH LV','Global Jaya','SIS','AIS'],
+      prices:[[270,527.04,444,275,284,185.4,104.4,431.22],[270,527.04,444,275,284,185.4,104.4,431.22],[321,532.38,444,287,284,185.4,106.8,431.22],[321,532.38,444,287,319,185.4,106.8,431.22],[367,532.38,486.65,310,384,215.31,141.6,442.65],[367,532.38,499.06,310,384,215.31,142.8,442.65]],
+      avgs:[319.33,530.6,460.28,290.67,323.17,195.37,117.8,435.03],
+      yoy:{sph:[275.0,289.0,303.7,319.3,319.3]},
+    },
+  },
+  PV:{
+    KINDY:{
+      grades:['K1','K2','K3'],
+      schools:['SPH PV','LittleAnts','Kindyroo','BBS PIK','Sunsmile PIK','Tutor Time Pluit'],
+      prices:[[96,null,null,53,null,59.95],[96,null,null,60,18.36,null],[99,null,null,62,19.16,null]],
+      avgs:[97,null,null,58.33,18.76,59.95],
+      yoy:{sph:[83.7,89.7,95.0,97.0,97.0]},
+    },
+    JS:{
+      grades:['G1','G2','G3','G4','G5'],
+      schools:['SPH PV','SPH LV','BTB Pluit Timur','BBS PIK'],
+      prices:[[140,196,72,108],[140,196,72,108],[148,208,72,108],[148,208,72,108],[148,208,72,108]],
+      avgs:[144.8,203.2,72,108],
+      yoy:{sph:[125.8,134.7,142.7,147.3,147.3]},
+    },
+    MSSS:{
+      grades:['G6','G7','G8','G9','G10'],
+      schools:['SPH PV','SPH LV','BTB Pluit Putri','BSJ','ACS','Bukit Sion'],
+      prices:[[160,223,null,444,265,null],[169,284,null,444,275,null],[169,284,null,444,275,null],[173,284,null,444,287,null],[173,319,77.4,444,287,45.65]],
+      avgs:[168.8,278.8,77.4,444,277.8,45.65],
+      yoy:{sph:[146.0,156.0,164.0,171.0,171.0]},
+    },
+  },
+};
+const YOY_YEARS=['2023–24','2024–25','2025–26','2026–27','2027–28'];
+let campus='LV',level='KINDY',view='a';
+let barInst=null,yoyInst=null,allInst=null;
+function fmt(v){return v==null?'N/A':Math.round(v)+' jt';}
+function hClass(v,isSph){
+  if(isSph)return 'h-sph';
+  if(v==null)return 'h-na';
+  if(v>=300)return 'h-high';
+  if(v>=100)return 'h-mid';
+  return 'h-low';
+}
+function renderKPI(){
+  const d=DATA[campus][level];
+  const sphAvg=d.avgs[0];
+  const compAvgs=d.avgs.slice(1).filter(v=>v!=null);
+  const mktAvg=compAvgs.reduce((a,b)=>a+b,0)/compAvgs.length;
+  const diff=((sphAvg/mktAvg)-1)*100;
+  const lowest=Math.min(...compAvgs);
+  const lowestName=d.schools[d.avgs.findIndex((v,i)=>i>0&&v===lowest)]||'—';
+  const diffColor = diff>0 ? 'kpi-pink' : 'kpi-teal';
+  const diffIcon = diff>0 ? '📈' : '📉';
+  document.getElementById('kpi-row').innerHTML=`
+    <div class="kpi kpi-blue">
+      <span class="kpi-icon">💰</span>
+      <div class="kpi-label">SPH ${campus} avg fee</div>
+      <div class="kpi-value">${fmt(sphAvg)}</div>
+      <div class="kpi-sub">Current year 2027/28</div>
+    </div>
+    <div class="kpi kpi-amber">
+      <span class="kpi-icon">🏫</span>
+      <div class="kpi-label">Market average</div>
+      <div class="kpi-value">${fmt(Math.round(mktAvg))}</div>
+      <div class="kpi-sub">${compAvgs.length} competitors</div>
+    </div>
+    <div class="kpi ${diffColor}">
+      <span class="kpi-icon">${diffIcon}</span>
+      <div class="kpi-label">SPH vs market</div>
+      <div class="kpi-value">${diff>0?'+':''}${diff.toFixed(0)}%</div>
+      <div class="kpi-sub">${diff>0?'Above':'Below'} market avg</div>
+    </div>
+    <div class="kpi" style="background:linear-gradient(135deg,#5B2D8E,#7B3FB5);border:none;">
+      <span class="kpi-icon" style="opacity:0.25;">🏷️</span>
+      <div class="kpi-label" style="color:rgba(255,255,255,0.8);">Lowest competitor</div>
+      <div class="kpi-value" style="color:#fff;">${fmt(lowest)}</div>
+      <div class="kpi-sub" style="color:rgba(255,255,255,0.8);">${lowestName}</div>
+    </div>`;
+}
+function renderTable(){
+  const d=DATA[campus][level];
+  const vis=d.schools.slice(0,Math.min(d.schools.length,10));
+  let h=`<table><thead><tr><th>Grade</th>`;
+  vis.forEach(s=>h+=`<th style="text-align:center">${s.length>14?s.slice(0,13)+'…':s}</th>`);
+  h+=`</tr></thead><tbody>`;
+  d.grades.forEach((g,gi)=>{
+    h+=`<tr><td>${g}</td>`;
+    vis.forEach((s,si)=>{const v=d.prices[gi][si];h+=`<td class="${hClass(v,si===0)}" style="text-align:center">${fmt(v)}</td>`;});
+    h+=`</tr>`;
+  });
+  h+=`<tr class="avg-row"><td>Average</td>`;
+  vis.forEach((s,si)=>h+=`<td style="text-align:center">${fmt(d.avgs[si])}</td>`);
+  h+=`</tr></tbody></table>`;
+  document.getElementById('grade-table').innerHTML=h;
+}
+let gapInst=null;
+function renderGap(){
+  const d=DATA[campus][level];
+  const sphFees=d.prices.map(row=>row[0]);
+  // Build per-grade gap for each competitor vs SPH
+  const comps=d.schools.slice(1,Math.min(d.schools.length,7));
+  const grades=d.grades;
+  const COLORS_POS=['#E24B4A','#F87171','#FCA5A5','#FCD34D','#FB923C','#A855F7'];
+  const COLORS_NEG=['#22C55E','#4ADE80','#86EFAC','#34D399','#6EE7B7','#10B981'];
+
+  const datasets=comps.map((school,si)=>{
+    const gaps=grades.map((g,gi)=>{
+      const compFee=d.prices[gi][si+1];
+      const sphFee=sphFees[gi];
+      if(compFee==null||sphFee==null||sphFee===0)return null;
+      return Math.round(((compFee-sphFee)/sphFee)*100);
+    });
+    const bgColors=gaps.map(v=>v==null?'rgba(0,0,0,0.06)':v>0?'rgba(226,75,74,0.82)':'rgba(34,197,94,0.82)');
+    const lblDisplay=gaps.map(v=>v!=null);
+    const lblText=gaps.map(v=>v==null?'':(v>0?'+':'')+v+'%');
+    const lblAnchor=gaps.map(v=>v!=null&&v<0?'start':'end');
+    const lblAlign=gaps.map(v=>v!=null&&v<0?'start':'end');
+    return {
+      label:school.length>14?school.slice(0,13)+'…':school,
+      data:gaps, backgroundColor:bgColors, borderRadius:5,
+      datalabels:{
+        display:lblDisplay,
+        anchor:lblAnchor, align:lblAlign,
+        formatter:(_,ctx)=>lblText[ctx.dataIndex]||'',
+        font:{size:9,weight:'700'},
+        color:'#185FA5',
+        offset:1
+      }
+    };
+  });
+
+  if(gapInst)gapInst.destroy();
+  gapInst=new Chart(document.getElementById('gapChart'),{
+    type:'bar',
+    data:{labels:grades, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:20,bottom:20}},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:10,padding:8}},
+        tooltip:{
+          mode:'index', intersect:false,
+          callbacks:{
+            title:ctx=>`Grade ${ctx[0].label}`,
+            label:ctx=>{const v=ctx.parsed.y;return ` ${ctx.dataset.label}: ${v==null?'N/A':(v>0?'+':'')+v+'% vs SPH'}`}
+          }
+        },
+        datalabels:{}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{callback:v=>v+'%',font:{size:10},color:'#888'},border:{display:false},
+          title:{display:true,text:'% difference vs SPH',font:{size:10},color:'#aaa'}
+        }
+      }
+    }
+  });
+
+  // Auto-insight
+  const allGaps=comps.map((school,si)=>{
+    const validGaps=grades.map((g,gi)=>{
+      const c=d.prices[gi][si+1],s=sphFees[gi];
+      return(c!=null&&s!=null&&s!==0)?((c-s)/s)*100:null;
+    }).filter(v=>v!=null);
+    const avg=validGaps.length?validGaps.reduce((a,b)=>a+b,0)/validGaps.length:null;
+    return{school,avg};
+  }).filter(x=>x.avg!=null);
+
+  const cheapest=allGaps.reduce((a,b)=>a.avg<b.avg?a:b);
+  const priciest=allGaps.reduce((a,b)=>a.avg>b.avg?a:b);
+  const sphPos=allGaps.filter(x=>x.avg<0).length;
+
+  document.getElementById('gap-insight').innerHTML=
+    `💡 <b>${priciest.school.split(' ').slice(0,2).join(' ')}</b> is the priciest — avg <b>+${priciest.avg.toFixed(0)}%</b> above SPH. `+
+    `<b>${cheapest.school.split(' ').slice(0,2).join(' ')}</b> is the most affordable — avg <b>${cheapest.avg.toFixed(0)}%</b> vs SPH. `+
+    `SPH is more expensive than <b>${sphPos} of ${allGaps.length}</b> competitors in this segment.`;
+}
+function renderBar(){
+  const d=DATA[campus][level];
+  const labels=d.schools.map((s,i)=>d.avgs[i]!=null?(s.length>14?s.slice(0,13)+'…':s):'');
+  const compAvgs=d.avgs.slice(1).filter(v=>v!=null);
+  const mktAvg=compAvgs.reduce((a,b)=>a+b,0)/compAvgs.length;
+  // SPH = bright orange-gold, competitors = steel blue — clearly distinct
+  const pointColors=d.avgs.map((_,i)=>i===0?'#E67E22':'#378ADD');
+  const pointBorders=d.avgs.map((_,i)=>i===0?'#C0392B':'#185FA5');
+  const pointSizes=d.avgs.map((_,i)=>i===0?10:5);
+  const lblColors=d.avgs.map((_,i)=>i===0?'#C0392B':'#185FA5');
+  const lblDisplay=d.avgs.map(v=>v!=null);
+  if(barInst)barInst.destroy();
+  barInst=new Chart(document.getElementById('barChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'School avg fee',data:d.avgs,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.08)',
+       fill:true,tension:0.35,borderWidth:2.5,spanGaps:true,
+       pointBackgroundColor:pointColors,pointBorderColor:pointBorders,pointBorderWidth:2,
+       pointRadius:pointSizes,pointHoverRadius:9,
+       datalabels:{display:lblDisplay,align:'top',anchor:'end',
+         formatter:v=>v==null?'':Math.round(v),
+         font:{size:10,weight:'800'},
+         color:lblColors,offset:4}},
+      {label:'Market avg',data:Array(d.avgs.length).fill(mktAvg),
+       borderColor:'#E24B4A',borderDash:[5,4],borderWidth:1.5,
+       pointRadius:0,fill:false,tension:0,
+       datalabels:{display:false}}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:28}},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:12,padding:12,
+          generateLabels:()=>[
+            {text:'SPH campus',fillStyle:'#E67E22',strokeStyle:'#C0392B',lineWidth:2},
+            {text:'Competitors',fillStyle:'#378ADD',strokeStyle:'#185FA5',lineWidth:2},
+            {text:'Market avg',strokeStyle:'#E24B4A',fillStyle:'transparent',lineWidth:2,lineDash:[5,4]}
+          ]
+        }},
+        tooltip:{callbacks:{label:ctx=>' Rp '+ctx.parsed.y+' jt'}},
+        datalabels:{}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:'#888',maxRotation:30,autoSkip:false}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{callback:v=>v+'jt',font:{size:10},color:'#888'},border:{display:false}}
+      }
+    }
+  });
+}
+function renderScatter(){
+  const d=DATA[campus][level];
+  const area=document.getElementById('scatter-area');
+  area.querySelectorAll('.scatter-dot,.scatter-label').forEach(e=>e.remove());
+  const valid=d.avgs.map((v,i)=>({v,i})).filter(x=>x.v!=null);
+  if(!valid.length) return;
+  const maxAvg=Math.max(...valid.map(x=>x.v));
+  const minAvg=Math.min(...valid.map(x=>x.v));
+  const w=area.offsetWidth||300,h=area.offsetHeight||180;
+
+  // Assign vertical bands to avoid overlap: sort by x, assign alternating y tiers
+  const sorted=[...valid].sort((a,b)=>a.v-b.v);
+  const yTiers=[0.25,0.55,0.80,0.35,0.65,0.45,0.70,0.30,0.60,0.50];
+  sorted.forEach((item,rank)=>{
+    const {v,i}=item;
+    const isSph=i===0;
+    const xPct=(maxAvg===minAvg)?0.5:(v-minAvg)/(maxAvg-minAvg);
+    const yPct=isSph?0.5:yTiers[rank%yTiers.length];
+    const left=xPct*(w-60)+30;
+    const bottom=yPct*(h-40)+20;
+    const size=isSph?18:11;
+    const color=isSph?'#0F4C8A':(v>300?'#DC2626':'#60A5FA');
+
+    const dot=document.createElement('div');
+    dot.className='scatter-dot';
+    dot.style.cssText=`left:${left}px;bottom:${bottom}px;width:${size}px;height:${size}px;background:${color};border:2px solid ${isSph?'#fff':'rgba(255,255,255,0.7)'};box-shadow:0 2px 6px rgba(0,0,0,0.2);z-index:${isSph?10:1};`;
+    dot.title=`${d.schools[i]}: ${fmt(v)}`;
+    area.appendChild(dot);
+
+    // Label above dot — check if it overlaps with previous labels and offset
+    const lbl=document.createElement('span');
+    lbl.className='scatter-label';
+    const name=d.schools[i].length>18?d.schools[i].slice(0,17)+'…':d.schools[i];
+    // Alternate label above/below dot based on rank to avoid vertical overlap
+    const labelAbove = rank % 2 === 0;
+    const labelBottom = labelAbove ? bottom+size+3 : bottom-16;
+    lbl.style.cssText=`left:${left-20}px;bottom:${labelBottom}px;color:${isSph?'#0F4C8A':'#374151'};font-weight:${isSph?700:600};font-size:${isSph?11:10}px;max-width:100px;white-space:normal;line-height:1.2;`;
+    lbl.textContent=name;
+    area.appendChild(lbl);
+  });
+}
+// YoY % data sourced directly from:
+//   SPH: 'SPH SPP YoY' sheet — avg % change per grade group per campus
+//   Market: 'Competitors YOY Price' sheet — avg % change of relevant competitors per campus/level
+// Years: [22/23, 23/24, 24/25, 25/26, 26/27]
+const YOY_PCT = {
+  // sph values computed directly from SPH SPP YoY sheet — avg % per grade group
+  // Format: [22/23, 23/24, 24/25, 25/26, 26/27]
+  LV:{ KINDY:{sph:[1.51, 5.02, 5.31,  1.68, 10.80], mkt:[13.94,14.92,27.45,28.73,38.19]},
+       JS:   {sph:[1.53, 5.11, 4.86,  4.97,  7.87],  mkt:[39.18,-7.47,5.17,2.0,13.19]},
+       MSSS: {sph:[1.52, 4.22, 5.01,  5.06,  7.18],  mkt:[17.08,-1.70,8.49,2.77,21.19]} },
+  SC:{ KINDY:{sph:[0.00, 0.00, 4.90,-11.67,  2.47],  mkt:[null,0.0,35.46,null,null]},
+       JS:   {sph:[0.00, 2.46,-2.50,-19.13,  2.56],  mkt:[null,-42.72,100.81,null,null]},
+       MSSS: {sph:[0.00, 0.00, 0.00,-28.94,  2.29],  mkt:[null,-56.28,127.36,null,null]} },
+  LC:{ KINDY:{sph:[-0.62, 3.58, 5.52, -0.30,  0.00], mkt:[null,5.56,10.0,null,null]},
+       JS:   {sph:[0.00,  2.86, 4.86,  5.30,  3.14],  mkt:[null,5.31,10.0,10.0,4.96]},
+       MSSS: {sph:[0.00,  3.13, 5.02,  4.97,  2.90],  mkt:[null,5.84,10.53,10.07,5.04]} },
+  KV:{ KINDY:{sph:[-5.14, 5.04, 6.14,  9.91,  5.03], mkt:[13.94,14.92,-10.21,2.75,38.19]},
+       JS:   {sph:[-2.24, 5.11, 9.00,  6.02,  5.22],  mkt:[28.23,-1.33,8.51,5.17,15.67]},
+       MSSS: {sph:[0.00,  5.30, 4.88,  5.06,  5.15],  mkt:[12.1,-1.98,9.84,5.2,13.12]} },
+  PV:{ KINDY:{sph:[1.27,  5.02, 7.17,  5.94,  2.11],  mkt:[0.0,null,null,-40.75,null]},
+       JS:   {sph:[2.84,  5.02, 7.01,  5.93,  3.27],  mkt:[1.9,4.69,10.0,-17.64,4.96]},
+       MSSS: {sph:[1.46,  5.04, 6.85,  5.13,  4.27],  mkt:[3.38,5.17,10.53,10.07,5.04]} },
+};
+const YOY_PCT_YEARS=['22/23','23/24','24/25','25/26','26/27'];
+
+function renderYoy(){
+  const d = DATA[campus][level];
+  if(yoyInst) yoyInst.destroy();
+
+  // ── SPH line: use hardcoded historical YoY values (last point = current avg) ──
+  const sphData = d.yoy.sph;
+
+  // ── Market line: compute from ACTUAL current competitor avgs + YOY_PCT history ──
+  // Current market avg = mean of all competitor avgs (excluding SPH at index 0)
+  const compAvgs = d.avgs.slice(1).filter(v => v != null);
+  const currentMktAvg = compAvgs.length
+    ? Math.round(compAvgs.reduce((a,b) => a+b,0) / compAvgs.length * 10) / 10
+    : null;
+
+  // Reconstruct historical market values by working backwards from current avg
+  // using the YOY_PCT market % change data (newest year = index 4 = 26/27)
+  let mktData = [null, null, null, null, null];
+  if (currentMktAvg != null) {
+    mktData[4] = currentMktAvg; // 2027-28 = current actual market avg
+    const pct = YOY_PCT[campus]?.[level]?.mkt || [];
+    // Work backwards: mktData[i] = mktData[i+1] / (1 + pct[i+1]/100)
+    // pct indices: [22/23, 23/24, 24/25, 25/26, 26/27] maps to YOY_YEARS indices 0-4
+    for (let i = 3; i >= 0; i--) {
+      const p = pct[i + 1]; // pct change going from year i to i+1
+      mktData[i] = (p != null && mktData[i+1] != null)
+        ? Math.round(mktData[i+1] / (1 + p/100) * 10) / 10
+        : null;
+    }
+  }
+
+  const sphDisplay = sphData.map(v => v != null);
+  const mktDisplay = mktData.map(v => v != null);
+
+  yoyInst = new Chart(document.getElementById('yoyChart'),{
+    type:'line',
+    data:{labels:YOY_YEARS, datasets:[
+      {
+        label:'SPH',
+        data:sphData,
+        borderColor:'#0F4C8A',backgroundColor:'rgba(15,76,138,0.07)',
+        fill:true,tension:0.35,pointRadius:5,pointBackgroundColor:'#0F4C8A',borderWidth:2.5,
+        datalabels:{display:sphDisplay,align:'top',anchor:'end',
+          formatter:v=>v==null?'':Math.round(v)+'jt',
+          font:{size:10,weight:'700'},color:'#0F4C8A',offset:3}
+      },
+      {
+        label:'Market avg',
+        data:mktData,
+        borderColor:'#E24B4A',borderDash:[5,4],backgroundColor:'transparent',
+        tension:0.35,pointRadius:4,pointBackgroundColor:'#E24B4A',borderWidth:2,
+        datalabels:{display:mktDisplay,align:'bottom',anchor:'start',
+          formatter:v=>v==null?'':Math.round(v)+'jt',
+          font:{size:10,weight:'600'},color:'#E24B4A',offset:3}
+      }
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:24,bottom:14}},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:11},boxWidth:12,padding:12}},
+        tooltip:{
+          mode:'index',intersect:false,
+          callbacks:{label:ctx=>' Rp '+ctx.parsed.y+' jt'}
+        },
+        datalabels:{}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+        y:{
+          grid:{color:'rgba(0,0,0,0.04)'},
+          ticks:{callback:v=>v+'jt',font:{size:11},color:'#888'},
+          border:{display:false}
+        }
+      }
+    }
+  });
+}
+let yoyPctInst=null;
+function renderYoyPct(){
+  const pct = YOY_PCT[campus]?.[level];
+  if(!pct) return;
+  if(yoyPctInst) yoyPctInst.destroy();
+
+  const sphPct = pct.sph; // [22/23, 23/24, 24/25, 25/26, 26/27]
+  const barColors = sphPct.map(v=> v==null ? '#ccc' : v > 7 ? '#C0392B' : v > 3 ? '#185FA5' : '#378ADD');
+  const lblDisplay = sphPct.map(v=>v!=null);
+  const lblText = sphPct.map(v=>v==null?'':(v>0?'+':'')+v.toFixed(1)+'%');
+  const lblColors = sphPct.map(v=>v==null?'#888': v>7?'#C0392B': v>3?'#185FA5':'#378ADD');
+
+  yoyPctInst = new Chart(document.getElementById('yoyPctChart'),{
+    type:'bar',
+    data:{
+      labels: YOY_PCT_YEARS,
+      datasets:[{
+        label:'SPH % fee increase',
+        data:sphPct,
+        backgroundColor:barColors,
+        borderRadius:6, barThickness:32,
+        datalabels:{
+          display:lblDisplay, anchor:'end', align:'end',
+          formatter:(_,ctx)=>lblText[ctx.dataIndex]||'',
+          font:{size:11,weight:'800'}, color:lblColors, offset:3
+        }
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:28, bottom:4}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{const v=ctx.parsed.y;return v==null?' N/A':` SPH fee increase: ${v>0?'+':''}${v.toFixed(1)}%`;}}},
+        datalabels:{}
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:11},color:'#888'}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},
+           ticks:{callback:v=>v+'%', font:{size:10},color:'#888'},
+           border:{display:false},
+           title:{display:true,text:'Annual fee increase %',font:{size:10},color:'#aaa'}}
+      }
+    }
+  });
+
+  // Insight
+  const valid = sphPct.filter(v=>v!=null);
+  const avg = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length).toFixed(1) : 'N/A';
+  const latest = sphPct[sphPct.length-1];
+  const maxVal = Math.max(...valid);
+  const maxYear = YOY_PCT_YEARS[sphPct.indexOf(maxVal)];
+  const minVal = Math.min(...valid);
+  const minYear = YOY_PCT_YEARS[sphPct.indexOf(minVal)];
+  document.getElementById('yoy-insight').innerHTML =
+    `💡 <b>SPH ${campus}</b> avg annual fee hike: <b>${avg}%</b> over 5 years. ` +
+    `Latest (26/27): <b style="color:${parseFloat(latest)>parseFloat(avg)?'#C0392B':'#27AE60'}">${latest!=null?(latest>0?'+':'')+latest.toFixed(1)+'%':'N/A'}</b>. ` +
+    `Highest hike: <b style="color:#C0392B">+${maxVal.toFixed(1)}%</b> in <b>${maxYear}</b> · ` +
+    `Lowest: <b style="color:#27AE60">${minVal>0?'+':''}${minVal.toFixed(1)}%</b> in <b>${minYear}</b>.`;
+}
+// ── 26/27 ACTUAL PRICES PER GRADE PER CAMPUS (from SPH SPP YoY sheet) ──────
+const GRADE_PRICE_2627 = {
+  grades:['M&C','Pre-K','K1','K2','K3','G1','G2','G3','G4','G5','G6','G7','G8','G9','G10','G11','G12'],
+  LV: [35,80,134,134,134,214,214,223,223,223,223,284,284,284,319,384,384],
+  SC: [null,39,50,53,60,70,70,78,88,88,93,125,127,127,138,145,145],
+  LC: [null,null,92,105,105,164,164,164,164,164,164,189,189,198,198,222,222],
+  KV: [null,null,127,131,138,206,219,219,219,219,270,270,270,321,321,367,367],
+  PV: [null,null,96,96,99,140,140,148,148,148,160,169,169,173,173,null,null],
+};
+
+let grade2627Inst=null;
+function renderGrade2627(){
+  if(grade2627Inst) grade2627Inst.destroy();
+  const g = GRADE_PRICE_2627;
+  const campusConfig = {
+    LV:{color:'#185FA5', pointStyle:'circle',  borderWidth:3, pointRadius:6},
+    SC:{color:'#27AE60', pointStyle:'rect',     borderWidth:3, pointRadius:6},
+    LC:{color:'#E67E22', pointStyle:'triangle', borderWidth:3, pointRadius:6},
+    KV:{color:'#8E44AD', pointStyle:'star',     borderWidth:3, pointRadius:6},
+    PV:{color:'#E24B4A', pointStyle:'rectRot',  borderWidth:3, pointRadius:6},
+  };
+
+  const datasets = ['LV','SC','LC','KV','PV'].map((c,ci)=>{
+    const cfg = campusConfig[c];
+    return {
+      label:`SPH ${c}`,
+      data: g[c],
+      borderColor: cfg.color,
+      backgroundColor: cfg.color+'18',
+      borderWidth: cfg.borderWidth,
+      pointRadius: cfg.pointRadius,
+      pointHoverRadius: 9,
+      pointBackgroundColor: cfg.color,
+      pointStyle: cfg.pointStyle,
+      fill: false, tension: 0.3, spanGaps: true,
+      datalabels:{display:false}
+    };
+  });
+
+  grade2627Inst = new Chart(document.getElementById('gradePrice2627Chart'),{
+    type:'line',
+    data:{labels: g.grades, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:36, left:8, right:8, bottom:4}},
+      plugins:{
+        legend:{display:true, position:'top', labels:{font:{size:12, weight:'600'}, boxWidth:14, padding:16,
+          usePointStyle:true}},
+        tooltip:{
+          mode:'index', intersect:false,
+          callbacks:{
+            title:ctx=>`Grade ${ctx[0].label} — 2026/27`,
+            label:ctx=>ctx.parsed.y!=null
+              ?` SPH ${ctx.dataset.label.replace('SPH ','')}: ${ctx.parsed.y} jt`
+              :` SPH ${ctx.dataset.label.replace('SPH ','')}: N/A`
+          }
+        },
+        datalabels:{}
+      },
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:11,weight:'600'},color:'#555'},
+           title:{display:true,text:'Grade Level (2026/27)',font:{size:11,weight:'600'},color:'#555'}},
+        y:{grid:{color:'rgba(0,0,0,0.05)'},
+           ticks:{callback:v=>v+'jt', font:{size:10},color:'#888'},
+           border:{display:false},
+           title:{display:true,text:'Annual Fee (jt IDR)',font:{size:11},color:'#888'}}
+      }
+    }
+  });
+}
+function renderViewB(){
+  renderGrade2627();
+  const campuses=['LV','SC','LC','KV','PV'],levels=['KINDY','JS','MSSS'],levelLabels=['Kindy','Junior School','Mid–Senior'],colors=['#185FA5','#378ADD','#85B7EB'];
+  if(allInst)allInst.destroy();
+  allInst=new Chart(document.getElementById('allCampusChart'),{
+    type:'bar',
+    data:{labels:campuses,datasets:levels.map((lv,li)=>({
+      label:levelLabels[li],
+      data:campuses.map(c=>DATA[c][lv].avgs[0]),
+      backgroundColor:colors[li],borderRadius:5,barThickness:22,
+      datalabels:{display:true,anchor:'end',align:'end',formatter:v=>v==null?'':Math.round(v)+'jt',font:{size:9,weight:'700'},color:colors[li],offset:2}
+    }))},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:18}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' Rp '+ctx.parsed.y+' jt'}},
+        datalabels:{}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:'#888'}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{callback:v=>v+'jt',font:{size:11},color:'#888'},border:{display:false}}
+      }
+    }
+  });
+  let h=`<table><thead><tr><th>Level</th>${campuses.map(c=>`<th style="text-align:center">SPH ${c}</th>`).join('')}</tr></thead><tbody>`;
+  levels.forEach((lv,li)=>{h+=`<tr><td>${levelLabels[li]}</td>`;campuses.forEach(c=>h+=`<td class="h-sph" style="text-align:center">${fmt(DATA[c][lv].avgs[0])}</td>`);h+=`</tr>`;});
+  h+=`</tbody></table>`;
+  document.getElementById('all-campus-table').innerHTML=h;
+}
+function setView(v,btn){view=v;document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('view-a').style.display=v==='a'?'block':'none';
+  document.getElementById('view-b').style.display=v==='b'?'block':'none';
+  document.getElementById('view-map').style.display=v==='map'?'block':'none';
+  document.getElementById('view-leaderboard').style.display=v==='leaderboard'?'block':'none';
+  document.getElementById('campus-ctrl').style.opacity=(v==='b')?'0.4':'1';
+  if(v==='b')renderViewB();
+  if(v==='map'){setTimeout(()=>initMap(),50);}
+  if(v==='leaderboard')renderLeaderboard();
+}
+function setCampus(c,btn){
+  campus=c;
+  document.querySelectorAll('#campus-ctrl .tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+  if(view==='leaderboard') renderLeaderboard();
+  // Auto-sync the map campus filter
+  if(view==='map' || leafletMap){
+    mapFilter=c;
+    document.querySelectorAll('.map-filter-btn').forEach(b=>{
+      b.classList.toggle('active', b.textContent.trim()===c);
+    });
+    if(leafletMap) applyMapFilter();
+  }
+}
+function setLevel(l,btn){
+  level=l;
+  document.querySelectorAll('#level-ctrl .tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+  if(view==='leaderboard') renderLeaderboard();
+  // Sync map when level changes
+  if(leafletMap) {
+    // Rebuild map markers for new level (must reinit to get new route lines)
+    rebuildMapForLevel();
+  }
+}
+function renderAll(){renderKPI();renderTable();renderGap();renderBar();renderScatter();renderYoy();renderYoyPct();renderMiniMap();}
+window.addEventListener('load',()=>renderAll());
+
+
+// ── EXCEL UPLOAD — PERSISTENT (SheetJS) ─────────────────────────────────────
+// Persists uploaded data in localStorage so refresh keeps last upload
+
+const STORAGE_KEY = 'sph_dashboard_data_v2';
+
+function saveToStorage(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) {
+    console.warn('localStorage save failed:', e);
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) {
+    console.warn('localStorage load failed:', e);
+    return null;
+  }
+}
+
+function clearSavedData() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  location.reload();
+}
+
+// Try to restore persisted data on page load
+(function restorePersistedData() {
+  const saved = loadFromStorage();
+  if (saved) {
+    // Merge into DATA — only overwrite keys that exist in saved
+    Object.keys(saved).forEach(k => { if (DATA[k]) DATA[k] = saved[k]; });
+    setStatus('success', 'Restored last uploaded data — upload a new file to update');
+  }
+})();
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  setStatus('loading', 'Reading ' + file.name + '...');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true, cellFormula:false});
+      const parsed = parseExcelData(wb);
+      if (parsed) {
+        // Deep-merge parsed into DATA
+        Object.keys(parsed).forEach(k => { DATA[k] = parsed[k]; });
+        saveToStorage(parsed);
+        renderAll();
+        if (view === 'leaderboard') renderLeaderboard();
+        setStatus('success', '✓ Loaded: ' + file.name + ' · ' + new Date().toLocaleTimeString() + ' · Data saved for this session');
+      }
+    } catch(err) {
+      setStatus('error', 'Error reading file: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('uploadStatus');
+  el.className = 'upload-status ' + type;
+  el.innerHTML = '<span class="upload-dot"></span><span>' + msg + '</span>';
+}
+
+function rawVal(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (s === '' || s === 'N/A' || s === '-' || s === '#VALUE!' || s === '#REF!' || s === '#DIV/0!') return null;
+  const n = parseFloat(s.replace(/,/g, ''));
+  if (isNaN(n)) return null;
+  // Values > 1,000 are assumed to be in IDR (not already in juta)
+  return n > 1000 ? Math.round(n / 1000000 * 100) / 100 : Math.round(n * 100) / 100;
+}
+
+function getRow(ws, rowNum) {
+  const row = [];
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({r: rowNum - 1, c})];
+    // Prefer cached formula value (.v), skip formula strings
+    if (!cell) { row.push(null); continue; }
+    if (cell.t === 'n') { row.push(cell.v); continue; }
+    if (cell.t === 's') { row.push(cell.v); continue; }
+    row.push(cell.v ?? null);
+  }
+  return row;
+}
+
+// Compute average of non-null values in an array
+function computeAvg(arr) {
+  const valid = arr.filter(v => v != null);
+  if (!valid.length) return null;
+  const sum = valid.reduce((a, b) => a + b, 0);
+  return Math.round(sum / valid.length * 100) / 100;
+}
+
+function parseExcelData(wb) {
+  const campuses = ['LV', 'SC', 'LC', 'KV', 'PV'];
+
+  // Section layout — all campuses share same row positions
+  // We detect grade rows dynamically between hdr+1 and avg row
+  const sectionMap = {
+    KINDY: { hdrRow: 4,  avgRow: 8  },
+    JS:    { hdrRow: 33, avgRow: null },  // avg detected dynamically
+    MSSS:  { hdrRow: 70, avgRow: null },
+  };
+
+  const result = {};
+  let totalFound = 0;
+
+  for (const campus of campuses) {
+    if (!wb.SheetNames.includes(campus)) continue;
+    const ws = wb.Sheets[campus];
+    result[campus] = {};
+
+    for (const [level, cfg] of Object.entries(sectionMap)) {
+      try {
+        // ── Step 1: Read header row to get school names ──────────────────
+        const hdrRow = getRow(ws, cfg.hdrRow);
+        const schools = [];
+        // Scan ALL columns from D onward (col index 3+), skip gaps
+        // A new competitor might be in any column - do not stop at first gap
+        for (let i = 3; i < hdrRow.length; i++) {
+          const v = hdrRow[i];
+          if (v != null && String(v).trim() !== '') {
+            schools.push(String(v).replace(/\n/g, ' ').trim());
+          }
+        }
+        if (!schools.length) continue;
+
+        // ── Step 2: Detect grade rows dynamically ─────────────────────────
+        // Grade rows start at hdrRow+1. Collect until we hit 'Average' or blank label
+        const gradeRows = [];
+        const grades = [];
+        let r = cfg.hdrRow + 1;
+        while (r <= cfg.hdrRow + 20) {
+          const row = getRow(ws, r);
+          const label = String(row[0] || '').trim();
+          if (label === 'Average' || label === '') {
+            if (label === 'Average') break;
+            r++; continue;
+          }
+          // Extract grade label (e.g. "K1 (3+)" → "K1", "G1" → "G1")
+          const gradeMatch = label.match(/^([KG]\d+)/);
+          if (gradeMatch) {
+            grades.push(gradeMatch[1]);
+            gradeRows.push(row);
+          }
+          r++;
+        }
+        if (!gradeRows.length) continue;
+
+        // ── Step 3: Extract price matrix ──────────────────────────────────
+        const prices = gradeRows.map(row =>
+          schools.map((_, si) => rawVal(row[3 + si]))
+        );
+
+        // ── Step 4: Compute averages client-side (never trust formula cells) ──
+        const avgs = schools.map((_, si) => {
+          const colVals = prices.map(row => row[si]);
+          return computeAvg(colVals);
+        });
+
+        // ── Step 5: Preserve existing YoY trend data ──────────────────────
+        const existingYoy = DATA[campus]?.[level]?.yoy
+          || { sph: [0, 0, 0, 0, avgs[0] || 0], mkt: [0, 0, 0, 0, 0] };
+
+        result[campus][level] = { grades, schools, prices, avgs, yoy: existingYoy };
+        totalFound++;
+      } catch (e) {
+        console.warn('Error parsing', campus, level, e);
+      }
+    }
+  }
+
+  if (totalFound === 0) {
+    setStatus('error', 'No matching sheets found. Expected sheets: LV, SC, LC, KV, PV');
+    return null;
+  }
+  return result;
+}
+
+// ── MAP ─────────────────────────────────────────────────────────────────────
+
+// School emoji icons based on type/tier
+const SCHOOL_EMOJI = {
+  sph:  '🏫',
+  high: '🎓',
+  mid:  '📚',
+  low:  '✏️',
+};
+
+const MAP_SCHOOLS = [
+  // SPH Campuses
+  {name:'SPH Lippo Village',     code:'LV', lat:-6.2428, lng:106.5969, type:'sph', avgFee:134, campus:'LV', levels:['KINDY','JS','MSSS']},
+  {name:'SPH Sentul City',       code:'SC', lat:-6.5722, lng:106.8651, type:'sph', avgFee:54,  campus:'SC', levels:['KINDY','JS','MSSS']},
+  {name:'SPH Lippo Cikarang',    code:'LC', lat:-6.3246, lng:107.1511, type:'sph', avgFee:101, campus:'LC', levels:['KINDY','JS','MSSS']},
+  {name:'SPH Kemang Village',    code:'KV', lat:-6.2623, lng:106.8131, type:'sph', avgFee:132, campus:'KV', levels:['KINDY','JS','MSSS']},
+  {name:'SPH Pluit Village',     code:'PV', lat:-6.1166, lng:106.7880, type:'sph', avgFee:97,  campus:'PV', levels:['KINDY','JS','MSSS']},
+
+  // LV KINDY competitors
+  {name:'Kipina Gading Serpong', lat:-6.2407, lng:106.6245, type:'comp', avgFee:36,  campus:'LV', tier:'low',  levels:['KINDY']},
+  {name:'PlayField',             lat:-6.2468, lng:106.6312, type:'comp', avgFee:52,  campus:'LV', tier:'low',  levels:['KINDY']},
+  {name:'iSmile',                lat:-6.2355, lng:106.7956, type:'comp', avgFee:156, campus:'LV', tier:'mid',  levels:['KINDY']},
+  {name:'Wellington College Indonesia', lat:-6.3197, lng:106.6509, type:'comp', avgFee:470, campus:'LV', tier:'high', levels:['KINDY']},
+  {name:'SPH Pluit Village',     lat:-6.1166, lng:106.7880, type:'sph-ref', code:'PV', avgFee:97, campus:'LV', tier:'mid', levels:['KINDY','JS']},
+  // LV JS competitors
+  {name:'SWA',                   lat:-6.3054, lng:106.6595, type:'comp', avgFee:164, campus:'LV', tier:'mid',  levels:['KINDY','JS']},
+  {name:'SDH LV',                lat:-6.2565, lng:106.5970, type:'comp', avgFee:35,  campus:'LV', tier:'low',  levels:['JS']},
+  {name:'HOPE Academy',          lat:-6.1742, lng:106.7914, type:'comp', avgFee:111, campus:'LV', tier:'mid',  levels:['JS']},
+  {name:'ILON Academy',          lat:-6.2320, lng:106.6140, type:'comp', avgFee:74,  campus:'LV', tier:'low',  levels:['JS']},
+  {name:'ACS Jakarta BSD',       lat:-6.2756, lng:106.6614, type:'comp', avgFee:254, campus:'LV', tier:'mid',  levels:['JS']},
+  {name:'Genesis Global School', lat:-6.2610, lng:106.6580, type:'comp', avgFee:74,  campus:'LV', tier:'low',  levels:['JS']},
+  {name:'Tzu Chi School',        lat:-6.1940, lng:106.6890, type:'comp', avgFee:79,  campus:'LV', tier:'low',  levels:['JS']},
+  // LV MSSS competitors
+  {name:'British School Jakarta',lat:-6.2776, lng:106.7911, type:'comp', avgFee:460, campus:'LV', tier:'high', levels:['MSSS']},
+  {name:'JIS',                   lat:-6.2847, lng:106.7888, type:'comp', avgFee:531, campus:'LV', tier:'high', levels:['MSSS']},
+  {name:'IICS',                  lat:-6.2380, lng:106.8290, type:'comp', avgFee:157, campus:'LV', tier:'mid',  levels:['MSSS']},
+  {name:'BINUS Serpong',         lat:-6.2560, lng:106.6570, type:'comp', avgFee:89,  campus:'LV', tier:'low',  levels:['MSSS']},
+  {name:'SIS PIK',               lat:-6.1200, lng:106.7510, type:'comp', avgFee:105, campus:'LV', tier:'mid',  levels:['MSSS']},
+  {name:'Tunas Muda',            lat:-6.2100, lng:106.7350, type:'comp', avgFee:126, campus:'LV', tier:'mid',  levels:['MSSS']},
+
+  // SC competitors
+  {name:'Sampoerna Academy Sentul', lat:-6.5562, lng:106.8214, type:'comp', avgFee:74, campus:'SC', tier:'low', levels:['KINDY','JS','MSSS']},
+  {name:'Sekolah Bogor Raya',    lat:-6.5978, lng:106.8207, type:'comp', avgFee:40,  campus:'SC', tier:'low',  levels:['KINDY','JS','MSSS']},
+  {name:'SDH Bogor',             lat:-6.5612, lng:106.7826, type:'comp', avgFee:15,  campus:'SC', tier:'low',  levels:['KINDY','JS','MSSS']},
+  {name:'BPK Penabur Sentul',    lat:-6.5680, lng:106.8456, type:'comp', avgFee:40,  campus:'SC', tier:'low',  levels:['KINDY','JS','MSSS']},
+  {name:'SDH Sentul',            lat:-6.5548, lng:106.8430, type:'comp', avgFee:18,  campus:'SC', tier:'low',  levels:['KINDY','JS','MSSS']},
+  {name:'Intercultural School Bogor', lat:-6.5440, lng:106.8072, type:'comp', avgFee:55, campus:'SC', tier:'low', levels:['KINDY','JS']},
+  {name:'Highscope Bogor',       lat:-6.6018, lng:106.8220, type:'comp', avgFee:7,   campus:'SC', tier:'low',  levels:['KINDY']},
+  {name:'Kippina Kids Sentul',   lat:-6.5714, lng:106.8652, type:'comp', avgFee:63,  campus:'SC', tier:'low',  levels:['KINDY']},
+
+  // LC competitors
+  {name:'Three Little Angels',   lat:-6.3150, lng:107.1320, type:'comp', avgFee:20,  campus:'LC', tier:'low',  levels:['KINDY']},
+  {name:'Caterpillars',          lat:-6.3200, lng:107.1250, type:'comp', avgFee:30,  campus:'LC', tier:'low',  levels:['KINDY']},
+  {name:'Apple Tree',            lat:-6.3180, lng:107.1420, type:'comp', avgFee:28,  campus:'LC', tier:'low',  levels:['KINDY']},
+  {name:'SDH LC',                lat:-6.3120, lng:107.1480, type:'comp', avgFee:31,  campus:'LC', tier:'low',  levels:['JS','MSSS']},
+  {name:'JIKS',                  lat:-6.3300, lng:107.1100, type:'comp', avgFee:114, campus:'LC', tier:'mid',  levels:['MSSS']},
+  {name:'Charis Global School',  lat:-6.3314, lng:107.1448, type:'comp', avgFee:29,  campus:'LC', tier:'low',  levels:['MSSS']},
+
+  // KV competitors
+  {name:'Mighty Minds',          lat:-6.2585, lng:106.8080, type:'comp', avgFee:67,  campus:'KV', tier:'low',  levels:['KINDY']},
+  {name:'HEI School Senayan',    lat:-6.2220, lng:106.7990, type:'comp', avgFee:126, campus:'KV', tier:'mid',  levels:['KINDY']},
+  {name:'Playhouse Academy',     lat:-6.2465, lng:106.8215, type:'comp', avgFee:101, campus:'KV', tier:'low',  levels:['KINDY']},
+  {name:'Kipina Kemang',         lat:-6.2680, lng:106.8150, type:'comp', avgFee:68,  campus:'KV', tier:'low',  levels:['KINDY']},
+  {name:'Nord Anglia Jakarta',   lat:-6.2642, lng:106.7954, type:'comp', avgFee:350, campus:'KV', tier:'high', levels:['JS','MSSS']},
+  {name:'ACS Jakarta',           lat:-6.2756, lng:106.8212, type:'comp', avgFee:254, campus:'KV', tier:'mid',  levels:['JS','MSSS']},
+  {name:'ACG School Jakarta',    lat:-6.2692, lng:106.8141, type:'comp', avgFee:332, campus:'KV', tier:'high', levels:['JS']},
+  {name:'Global Jaya School',    lat:-6.2810, lng:106.6997, type:'comp', avgFee:160, campus:'KV', tier:'mid',  levels:['JS','MSSS']},
+  {name:'Jakarta Intercultural School', lat:-6.2906, lng:106.7879, type:'comp', avgFee:464, campus:'KV', tier:'high', levels:['JS','MSSS']},
+  {name:'British School Jakarta',lat:-6.2776, lng:106.7911, type:'comp', avgFee:397, campus:'KV', tier:'high', levels:['JS','MSSS']},
+  {name:'AIS Jakarta',           lat:-6.2720, lng:106.8060, type:'comp', avgFee:389, campus:'KV', tier:'high', levels:['JS']},
+
+  // PV competitors
+  {name:'BBS Pantai Indah Kapuk',lat:-6.1162, lng:106.7422, type:'comp', avgFee:58,  campus:'PV', tier:'low',  levels:['KINDY']},
+  {name:'Sunsmile PIK',          lat:-6.1098, lng:106.7356, type:'comp', avgFee:19,  campus:'PV', tier:'low',  levels:['KINDY']},
+  {name:'Tutor Time Pluit',      lat:-6.1263, lng:106.7924, type:'comp', avgFee:60,  campus:'PV', tier:'low',  levels:['KINDY']},
+  {name:'BTB Pluit Timur',       lat:-6.1290, lng:106.7880, type:'comp', avgFee:72,  campus:'PV', tier:'low',  levels:['JS']},
+  {name:'BBS PIK JS',            lat:-6.1286, lng:106.7653, type:'comp', avgFee:108, campus:'PV', tier:'mid',  levels:['JS']},
+  {name:'BTB Pluit Putri',       lat:-6.1350, lng:106.7840, type:'comp', avgFee:77,  campus:'PV', tier:'low',  levels:['MSSS']},
+  {name:'Bukit Sion',            lat:-6.1500, lng:106.8100, type:'comp', avgFee:46,  campus:'PV', tier:'low',  levels:['MSSS']},
+];
+
+
+let leafletMap = null;
+let allMarkers = [];
+let mapFilter = 'ALL';
+
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Estimate drive time: assume avg speed ~25 km/h in Jakarta traffic
+function driveTime(km){
+  const mins = Math.round(km / 25 * 60);
+  if (mins < 60) return mins + ' min';
+  const h = Math.floor(mins/60), m = mins % 60;
+  return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+}
+
+function markerColor(school){
+  if(school.type==='sph' || school.type==='sph-ref') return '#1565C0';
+  if(school.tier==='high') return '#DC2626';
+  if(school.tier==='mid') return '#D97706';
+  return '#16A34A';
+}
+
+function markerEmoji(school){
+  if(school.type==='sph') return SCHOOL_EMOJI.sph;
+  return SCHOOL_EMOJI[school.tier] || SCHOOL_EMOJI.low;
+}
+
+function makeSvgIcon(school){
+  const isSph = school.type === 'sph' || school.type === 'sph-ref';
+  const color = markerColor(school);
+  const fullName = school.name;
+
+  // Wrap into up to 2 lines of ~18 chars
+  const words = fullName.split(' ');
+  let line1 = '', line2 = '';
+  for (const w of words) {
+    if (!line1) { line1 = w; }
+    else if ((line1 + ' ' + w).length <= 18) { line1 += ' ' + w; }
+    else if (!line2) { line2 = w; }
+    else if ((line2 + ' ' + w).length <= 20) { line2 += ' ' + w; }
+  }
+  const twoLine = line2.length > 0;
+
+  const charW  = isSph ? 8 : 7;
+  const pillH  = twoLine ? (isSph ? 32 : 28) : (isSph ? 22 : 18);
+  const maxLen = Math.max(line1.length, line2.length);
+  const labelW = Math.max(maxLen * charW + 18, 60);
+  const pinH   = isSph ? 10 : 8;   // teardrop tail height
+  const totalW = labelW + 4;
+  const cx     = totalW / 2;
+
+  // Google Maps-style: just the label pill with a small pointer triangle at bottom-center
+  // No circle pin — cleaner, more professional
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${pillH + pillH + 8}" viewBox="0 0 ${totalW} ${pillH + pinH + 4}">
+    <defs>
+      <filter id="sh_comp_txt" x="-30%" y="-60%" width="160%" height="220%"><feFlood flood-color="#fff" flood-opacity="1" result="bg"/><feMorphology in="SourceAlpha" operator="dilate" radius="2" result="outline"/><feFlood flood-color="#fff" flood-opacity="1" result="white"/><feComposite in="white" in2="outline" operator="in" result="whiteOutline"/><feMerge><feMergeNode in="whiteOutline"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="sh_${(school.code||school.name.slice(0,5)).replace(/\s/g,'_')}" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.28)"/>
+      </filter>
+    </defs>
+    ${isSph
+      ? `<rect x="0" y="0" width="${totalW}" height="${pillH}" rx="6"
+           fill="${color}" filter="url(#sh_${(school.code||school.name.slice(0,5)).replace(/\s/g,'_')})"/>
+         <polygon points="${cx-5},${pillH} ${cx+5},${pillH} ${cx},${pillH+pinH}" fill="${color}"/>
+         ${twoLine
+           ? `<text x="${cx}" y="${pillH*0.38}" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="800" fill="#fff" font-family="Outfit,Arial,sans-serif">${line1}</text>
+              <text x="${cx}" y="${pillH*0.76}" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="700" fill="rgba(255,255,255,0.9)" font-family="Outfit,Arial,sans-serif">${line2}</text>`
+           : `<text x="${cx}" y="${pillH*0.58}" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="800" fill="#fff" font-family="Outfit,Arial,sans-serif">${line1}</text>`
+         }`
+      : `${twoLine
+           ? `<text x="${cx}" y="${-4}" text-anchor="middle" dominant-baseline="auto" font-size="11" font-weight="900" fill="#0F172A" font-family="Outfit,Arial,sans-serif" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">${line1}</text>
+              <text x="${cx}" y="${9}" text-anchor="middle" dominant-baseline="auto" font-size="11" font-weight="900" fill="#0F172A" font-family="Outfit,Arial,sans-serif" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">${line2}</text>`
+           : `<text x="${cx}" y="${0}" text-anchor="middle" dominant-baseline="auto" font-size="12" font-weight="900" fill="#0F172A" font-family="Outfit,Arial,sans-serif" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">${line1}</text>`
+         }
+         <polygon points="${cx-4},${4} ${cx+4},${4} ${cx},${4+pinH}" fill="#E8210A"/>`
+    }
+  </svg>`;
+
+  // For competitors, the anchor is the triangle tip (at y=pinH from top of SVG)
+  // For SPH, anchor is bottom of pill+triangle
+  const anchorY = isSph ? (pillH + pinH + 2) : pinH + 2;
+  const svgH = isSph ? (pillH + pinH + 4) : (pinH + (twoLine ? 20 : 14));
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [totalW, svgH],
+    iconAnchor: [cx, anchorY]
+  });
+}
+
+function nearestSPH(school){
+  const sphs = MAP_SCHOOLS.filter(s=>s.type==='sph');
+  let best=sphs[0], bestDist=999;
+  sphs.forEach(s=>{const d=haversineKm(school.lat,school.lng,s.lat,s.lng);if(d<bestDist){bestDist=d;best=s;}});
+  return {campus:best.code, dist:bestDist};
+}
+
+// Route lines — all red, Google Maps style
+function makeRouteLine(sph, comp, dist){
+  const lines = [];
+
+  // White casing (road border effect)
+  const casing = L.polyline([[sph.lat,sph.lng],[comp.lat,comp.lng]],{
+    color:'#FFFFFF', weight:6, opacity:1, interactive:false
+  });
+  casing._campusCode = comp.campus; casing._isLine = true; casing._level = comp.levels ? comp.levels[0] : null;
+  lines.push(casing);
+
+  // Red inner line — all competitors
+  const route = L.polyline([[sph.lat,sph.lng],[comp.lat,comp.lng]],{
+    color:'#E8210A', weight:3.5, opacity:1, interactive:false
+  });
+  route._campusCode = comp.campus; route._isLine = true; route._level = comp.levels ? comp.levels[0] : null;
+  lines.push(route);
+
+  // Distance label — staggered placement to avoid overlap
+  const midLat = sph.lat + 0.42 * (comp.lat - sph.lat);
+  const midLng = sph.lng + 0.42 * (comp.lng - sph.lng);
+  const time = driveTime(dist);
+  const label = dist.toFixed(1) + ' km  ' + time;
+  const labelW = label.length * 6.8 + 20;
+
+  const bubble = L.marker([midLat, midLng], {
+    icon: L.divIcon({
+      html: `<div style="
+        background:rgba(255,255,255,0.96);color:#1A1A2E;font-size:11px;font-weight:800;padding:3px 8px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.22);white-space:nowrap;font-family:Outfit,Arial,sans-serif;border:1.5px solid rgba(220,38,38,0.3);line-height:1.4;">${label}</div>`,
+      className: '',
+      iconAnchor: [Math.round(labelW/2), 14]
+    }),
+    interactive: false,
+    zIndexOffset: 200
+  });
+  bubble._campusCode = comp.campus; bubble._isLine = true; bubble._level = comp.levels ? comp.levels[0] : null;
+  lines.push(bubble);
+  return lines;
+}
+
+function applyMapFilter(){
+  if (!leafletMap) return;
+  const visiblePts = [];
+  allMarkers.forEach(m => {
+    const school = m._schoolData;
+    if (school) {
+      const campusOk = mapFilter==='ALL'
+        || school.campus===mapFilter
+        || (school.type==='sph' && school.code===mapFilter)
+        || (school.type==='sph-ref' && school.campus===mapFilter);
+      // Level filter: SPH campuses always show, competitors filtered by level
+      const levelOk = (school.type==='sph')
+        || !school.levels
+        || school.levels.includes(level);
+      const show = campusOk && levelOk;
+      if (show) {
+        if (!leafletMap.hasLayer(m)) m.addTo(leafletMap);
+        if (school.lat) visiblePts.push([school.lat, school.lng]);
+      } else {
+        if (leafletMap.hasLayer(m)) leafletMap.removeLayer(m);
+      }
+    } else if (m._isLine) {
+      const show = (mapFilter==='ALL' || m._campusCode===mapFilter) && (!m._level || m._level===level);
+      if (show) { if (!leafletMap.hasLayer(m)) m.addTo(leafletMap); }
+      else { if (leafletMap.hasLayer(m)) leafletMap.removeLayer(m); }
+    }
+  });
+  // Fit map to visible schools
+  if (visiblePts.length > 1 && mapFilter !== 'ALL') {
+    try { leafletMap.fitBounds(visiblePts, {padding:[50,60], maxZoom:13}); } catch(e){}
+  } else if (visiblePts.length === 1) {
+    leafletMap.setView(visiblePts[0], 13);
+  }
+  renderDistTable();
+}
+
+function filterMap(code, btn){
+  mapFilter = code;
+  document.querySelectorAll('.map-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if (leafletMap) applyMapFilter();
+  renderDistTable();
+}
+// Also update map filter when campus tab changes while on map view
+function syncMapFilter(campusCode){
+  mapFilter = campusCode;
+  document.querySelectorAll('.map-filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.trim()===campusCode || (campusCode==='ALL' && b.textContent.trim()==='All'));
+  });
+  if(leafletMap) applyMapFilter();
+}
+
+function initMap(){
+  if(typeof L === 'undefined'){
+    document.getElementById('map-container').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:14px;flex-direction:column;gap:8px;"><span style="font-size:32px;">🗺️</span><b>Map unavailable</b><span style="font-size:12px;">Leaflet library not loaded — try opening the file directly in Chrome</span></div>';
+    return;
+  }
+  if(leafletMap){
+    leafletMap.invalidateSize();
+    applyMapFilter();
+    return;
+  }
+
+  leafletMap = L.map('map-container', {zoomControl:false}).setView([-6.35, 106.85], 10);
+  L.control.zoom({position:'topright'}).addTo(leafletMap);
+
+  // Use CartoDB Positron for a clean Google Maps-like style
+  const tileProviders = [
+    {
+      url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      opts:{attribution:'© CartoDB © OSM', subdomains:'abcd', maxZoom:19}
+    },
+    {
+      url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      opts:{attribution:'© OpenStreetMap', subdomains:'abc', maxZoom:19}
+    },
+  ];
+
+  let tileLayer = L.tileLayer(tileProviders[0].url, tileProviders[0].opts).addTo(leafletMap);
+  let fallbackIdx = 1;
+  tileLayer.on('tileerror', ()=>{
+    if(fallbackIdx < tileProviders.length){
+      leafletMap.removeLayer(tileLayer);
+      tileLayer = L.tileLayer(tileProviders[fallbackIdx].url, tileProviders[fallbackIdx].opts).addTo(leafletMap);
+      fallbackIdx++;
+    }
+  });
+
+  // Draw route lines FIRST (so markers appear on top)
+  const sphMap = {};
+  MAP_SCHOOLS.filter(s=>s.type==='sph').forEach(s=>sphMap[s.code]=s);
+  MAP_SCHOOLS.filter(s=>s.type==='comp').forEach(comp=>{
+    const sph = sphMap[comp.campus];
+    if(!sph) return;
+    const dist = haversineKm(sph.lat, sph.lng, comp.lat, comp.lng);
+    makeRouteLine(sph, comp, dist).forEach(layer=>{
+      layer.addTo(leafletMap);
+      allMarkers.push(layer);
+    });
+  });
+
+  // Draw markers on top
+  MAP_SCHOOLS.forEach(school=>{
+    const isSph = school.type==='sph';
+    const marker = L.marker([school.lat, school.lng], {
+      icon: makeSvgIcon(school),
+      zIndexOffset: isSph ? 1000 : 0
+    });
+
+    // Rich Google Maps-style popup
+    const color = markerColor(school);
+    const emoji = markerEmoji(school);
+    let popupHtml = `
+      <div style="font-family:Outfit,Arial,sans-serif;min-width:200px;max-width:240px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #F3F4F6;">
+          <div style="width:38px;height:38px;border-radius:10px;background:${color};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.2);">${emoji}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#111827;line-height:1.2;">${school.name}</div>
+            <div style="font-size:11px;color:#6B7280;margin-top:2px;">${isSph?'SPH Campus':'Competitor School'}</div>
+          </div>
+        </div>`;
+
+    if(school.type==='sph' || school.type==='sph-ref'){
+      const sphCode = school.code || school.campus;
+      popupHtml += `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="background:#EBF4FF;border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Avg Kindy Fee</div>
+            <div style="font-size:16px;font-weight:800;color:#0F4C8A;margin-top:2px;">${school.avgFee} jt</div>
+          </div>
+          <div style="background:#F0FDF4;border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Campus Code</div>
+            <div style="font-size:16px;font-weight:800;color:#16A34A;margin-top:2px;">SPH ${school.code||school.campus}</div>
+          </div>
+        </div>`;
+    } else {
+      const nearest = nearestSPH(school);
+      const tierLabel = school.tier==='high'?'Premium':school.tier==='mid'?'Mid-tier':'Budget';
+      const tierColor = school.tier==='high'?'#FEE2E2':school.tier==='mid'?'#FEF9EE':'#EDFAF2';
+      const tierText  = school.tier==='high'?'#9B1C1C':school.tier==='mid'?'#6D4A00':'#166534';
+      const time = driveTime(nearest.dist);
+      popupHtml += `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div style="background:#EBF4FF;border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Avg Fee</div>
+            <div style="font-size:15px;font-weight:800;color:#0F4C8A;margin-top:2px;">${school.avgFee} jt</div>
+          </div>
+          <div style="background:${tierColor};border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:10px;color:#6B7280;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Tier</div>
+            <div style="font-size:13px;font-weight:800;color:${tierText};margin-top:2px;">${tierLabel}</div>
+          </div>
+        </div>
+        <div style="background:#F8FAFC;border-radius:8px;padding:8px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">🚗</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#374151;">Nearest SPH: <span style="color:#0F4C8A;">SPH ${nearest.campus}</span></div>
+            <div style="font-size:11px;color:#6B7280;margin-top:1px;">${nearest.dist.toFixed(1)} km · ~${time} drive</div>
+          </div>
+        </div>`;
+    }
+    popupHtml += '</div>';
+
+    marker.bindPopup(popupHtml, {
+      maxWidth: 260,
+      className: 'sph-popup'
+    });
+    marker._schoolData = school;
+    marker.addTo(leafletMap);
+    allMarkers.push(marker);
+  });
+
+  renderDistTable();
+}
+
+function renderDistTable(){
+  const sphCampuses = MAP_SCHOOLS.filter(s=>s.type==='sph');
+  const competitors = MAP_SCHOOLS.filter(s=>s.type==='comp' && (mapFilter==='ALL'||s.campus===mapFilter));
+  if(!competitors.length){document.getElementById('dist-table').innerHTML='<p style="color:var(--muted);font-size:13px;padding:12px 0;">No competitors in this filter.</p>';return;}
+
+  const visibleSPH = mapFilter==='ALL' ? sphCampuses : sphCampuses.filter(s=>s.code===mapFilter);
+
+  let h=`<table><thead><tr><th>Competitor</th><th>Tier</th>`;
+  visibleSPH.forEach(s=>h+=`<th style="text-align:center">SPH ${s.code}</th>`);
+  h+=`<th style="text-align:center">Nearest SPH</th></tr></thead><tbody>`;
+
+  competitors.forEach(comp=>{
+    const tierLabel = comp.tier==='high'?'<span style="color:#A32D2D;background:#FCEBEB;padding:2px 7px;border-radius:5px;font-size:11px;">Premium</span>':comp.tier==='mid'?'<span style="color:#7A5200;background:#FFF8E6;padding:2px 7px;border-radius:5px;font-size:11px;">Mid</span>':'<span style="color:#3B6D11;background:#EAF3DE;padding:2px 7px;border-radius:5px;font-size:11px;">Low</span>';
+    let minDist=999, minCampus='';
+    h+=`<tr><td>${comp.name}</td><td>${tierLabel}</td>`;
+    visibleSPH.forEach(sph=>{
+      const d=haversineKm(comp.lat,comp.lng,sph.lat,sph.lng);
+      if(d<minDist){minDist=d;minCampus=sph.code;}
+      const isNearest = (comp.campus===sph.code);
+      h+=`<td style="text-align:center;${isNearest?'font-weight:700;color:var(--sph-text);':''}">${d.toFixed(1)} km</td>`;
+    });
+    h+=`<td style="text-align:center;"><span style="background:var(--sph-dark);color:#fff;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;">SPH ${minCampus}<br>${minDist.toFixed(1)} km</span></td>`;
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table>`;
+  document.getElementById('dist-table').innerHTML=h;
+}
+
+
+// Rebuild map markers when campus or level changes
+function rebuildMapForLevel(){
+  if (!leafletMap) return;
+  // Remove all markers and lines
+  allMarkers.forEach(m => { try { leafletMap.removeLayer(m); } catch(e){} });
+  allMarkers = [];
+
+  // Re-draw route lines for current level
+  const sphMap = {};
+  MAP_SCHOOLS.filter(s=>s.type==='sph').forEach(s=>sphMap[s.code]=s);
+  MAP_SCHOOLS.filter(s=>(s.type==='comp'||s.type==='sph-ref')).forEach(comp=>{
+    const sph = sphMap[comp.campus] || sphMap[campus];
+    if(!sph) return;
+    const dist = haversineKm(sph.lat, sph.lng, comp.lat, comp.lng);
+    makeRouteLine(sph, comp, dist).forEach(layer=>{
+      layer.addTo(leafletMap);
+      allMarkers.push(layer);
+    });
+  });
+
+  // Re-draw markers
+  MAP_SCHOOLS.forEach(school=>{
+    const isSph = school.type==='sph';
+    const marker = L.marker([school.lat, school.lng], {
+      icon: makeSvgIcon(school), zIndexOffset: isSph ? 1000 : 0
+    });
+    // Simplified popup
+    const color = markerColor(school);
+    const nearest = (school.type==='comp'||school.type==='sph-ref') ? nearestSPH(school) : null;
+    const tierLabel = school.tier==='high'?'Premium':school.tier==='mid'?'Mid-tier':'Budget';
+    const tierColor = school.tier==='high'?'#FEE2E2':school.tier==='mid'?'#FEF9EE':'#EDFAF2';
+    const tierText  = school.tier==='high'?'#9B1C1C':school.tier==='mid'?'#6D4A00':'#166534';
+    let popupHtml = `<div style="font-family:Outfit,Arial,sans-serif;min-width:180px;">
+      <div style="font-size:13px;font-weight:700;color:#111;margin-bottom:6px;">${school.name}</div>`;
+    if (isSph) {
+      popupHtml += `<div style="font-size:11px;color:#0F4C8A;font-weight:700;">SPH ${school.code} Campus</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:4px;">Avg fee: ${school.avgFee} jt</div>`;
+    } else {
+      popupHtml += `<div style="background:${tierColor};color:${tierText};display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-bottom:6px;">${tierLabel}</div>
+        <div style="font-size:11px;color:#6B7280;">Avg fee: <b>${school.avgFee} jt</b></div>`;
+      if (nearest) popupHtml += `<div style="font-size:11px;color:#0F4C8A;font-weight:700;margin-top:4px;">🚗 ${nearest.dist.toFixed(1)} km · ~${driveTime(nearest.dist)} from SPH ${nearest.campus}</div>`;
+    }
+    popupHtml += '</div>';
+    marker.bindPopup(popupHtml, {maxWidth:220, className:'sph-popup'});
+    marker._schoolData = school;
+    marker.addTo(leafletMap);
+    allMarkers.push(marker);
+  });
+
+  applyMapFilter();
+}
+
+// ── SCHOOL FINDER (search only, like Google Maps) ────────────────────────────
+let searchMarker = null;
+
+function toggleAddSchool(){
+  const panel = document.getElementById('addSchoolPanel');
+  const btn   = document.getElementById('addSchoolBtn');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.style.background = isOpen
+    ? 'linear-gradient(135deg,#0F4C8A,#1A6BC4)'
+    : 'linear-gradient(135deg,#059669,#10B981)';
+  if (!isOpen) setTimeout(()=>document.getElementById('newSchoolName').focus(), 100);
+}
+
+function showSearchStatus(msg, color){
+  const el = document.getElementById('searchStatus');
+  el.style.display = 'block';
+  el.style.color = color || '#6B7280';
+  el.innerHTML = msg;
+}
+
+function clearSearch(){
+  document.getElementById('newSchoolName').value = '';
+  document.getElementById('searchStatus').style.display = 'none';
+  document.getElementById('searchResults').innerHTML = '';
+  if (searchMarker && leafletMap) { leafletMap.removeLayer(searchMarker); searchMarker = null; }
+}
+
+async function searchSchool(){
+  const name = document.getElementById('newSchoolName').value.trim();
+  if (!name) { showSearchStatus('Please enter a school name or address.', '#D97706'); return; }
+
+  showSearchStatus('Searching for <b>' + name + '</b>...', '#0F4C8A');
+  document.getElementById('searchResults').innerHTML = '';
+
+  try {
+    const query = encodeURIComponent(name + ' Jakarta Indonesia');
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + query + '&countrycodes=id&addressdetails=1';
+    const resp = await fetch(url, {headers:{'Accept-Language':'en'}});
+    const results = await resp.json();
+
+    if (!results || results.length === 0) {
+      showSearchStatus('No results found. Try adding "Jakarta" or check the spelling.', '#DC2626');
+      return;
+    }
+
+    showSearchStatus('Found ' + results.length + ' result(s) — click one to view on map:', '#059669');
+
+    const wrap = document.getElementById('searchResults');
+    wrap.innerHTML = results.map((r, i) => {
+      const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+      const shortName = r.display_name.split(',').slice(0,3).join(', ');
+      const type = r.type || r.class || '';
+      return `<div onclick="flyToResult(${lat},${lng},'${shortName.replace(/'/g,'')}')" style="
+        padding:9px 12px;background:#fff;border-radius:8px;cursor:pointer;
+        border:1px solid rgba(15,76,138,0.12);
+        display:flex;align-items:center;gap:10px;
+        transition:all 0.15s;
+      " onmouseover="this.style.background='#EBF4FF';this.style.borderColor='rgba(15,76,138,0.3)'"
+         onmouseout="this.style.background='#fff';this.style.borderColor='rgba(15,76,138,0.12)'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#0F4C8A" opacity="0.7"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#111827;">${shortName}</div>
+          <div style="font-size:10px;color:#9CA3AF;margin-top:1px;">${r.lat.slice(0,8)}, ${r.lon.slice(0,8)} · ${type}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Auto-fly to best result
+    flyToResult(parseFloat(results[0].lat), parseFloat(results[0].lon), results[0].display_name.split(',').slice(0,2).join(', '));
+
+  } catch(e) {
+    showSearchStatus('Search failed — check your internet connection.', '#DC2626');
+  }
+}
+
+function flyToResult(lat, lng, name){
+  if (!leafletMap) return;
+  // Remove old search marker
+  if (searchMarker) { leafletMap.removeLayer(searchMarker); searchMarker = null; }
+
+  // Drop a blue search pin
+  searchMarker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      html: `<div style="
+        background:#0F4C8A;color:#fff;
+        padding:5px 12px;border-radius:5px;
+        font-size:12px;font-weight:700;font-family:Outfit,Arial,sans-serif;
+        box-shadow:0 3px 10px rgba(15,76,138,0.4);
+        border:2px solid #fff;
+        white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;
+      ">${name}</div>
+      <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid #0F4C8A;margin:0 auto;"></div>`,
+      className: '',
+      iconAnchor: [60, 38]
+    }),
+    zIndexOffset: 2000
+  });
+  searchMarker.addTo(leafletMap);
+  leafletMap.flyTo([lat, lng], 15, {duration: 1.2});
+}
+
+
+// ── MINI MAP (inline per campus) ─────────────────────────────────────────────
+let miniMap = null;
+let miniMarkers = [];
+
+function renderMiniMap(){
+  const campusData = MAP_SCHOOLS.find(s => s.type === 'sph' && s.code === campus);
+  if (!campusData || typeof L === 'undefined') return;
+
+  document.getElementById('mini-map-title').textContent =
+    campusData.name + ' — campus & nearby competitors';
+
+  // Always reinit mini-map so it recenters for the new campus
+  if (miniMap) {
+    miniMap.off(); miniMap.remove(); miniMap = null;
+  }
+  miniMap = L.map('mini-map', {zoomControl:true, scrollWheelZoom:false})
+    .setView([campusData.lat, campusData.lng], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    {attribution:'© CartoDB © OSM', subdomains:'abcd', maxZoom:19}).addTo(miniMap);
+
+  // Clear old markers
+  miniMarkers.forEach(m => miniMap.removeLayer(m));
+  miniMarkers = [];
+
+  // Add SPH campus marker
+  const sphMarker = L.marker([campusData.lat, campusData.lng], {
+    icon: makeSvgIcon(campusData), zIndexOffset: 1000
+  }).addTo(miniMap);
+  miniMarkers.push(sphMarker);
+
+  // Add competitor markers and lines — filtered by BOTH campus AND current level
+  const comps = MAP_SCHOOLS.filter(s =>
+    (s.type === 'comp' || s.type === 'sph-ref') &&
+    s.campus === campus &&
+    (!s.levels || s.levels.includes(level))
+  );
+
+  comps.forEach((comp, ci) => {
+    const dist = haversineKm(campusData.lat, campusData.lng, comp.lat, comp.lng);
+    const time = driveTime(dist);
+
+    // Route line (casing + colored)
+    const casing = L.polyline([[campusData.lat,campusData.lng],[comp.lat,comp.lng]],
+      {color:'#fff', weight:6, opacity:1, interactive:false}).addTo(miniMap);
+    const route  = L.polyline([[campusData.lat,campusData.lng],[comp.lat,comp.lng]],
+      {color:'#E8210A', weight:3.5, opacity:1, interactive:false}).addTo(miniMap);
+    miniMarkers.push(casing, route);
+
+    // Distance label — staggered along route to avoid overlap
+    const tFrac = 0.35 + (ci % 5) * 0.06;
+    const midLat = campusData.lat + tFrac * (comp.lat - campusData.lat);
+    const midLng = campusData.lng + tFrac * (comp.lng - campusData.lng);
+    const label = dist.toFixed(1) + ' km  ' + time;
+    const lblW = label.length * 6.5 + 20;
+    const bubble = L.marker([midLat, midLng], {
+      icon: L.divIcon({
+        html: `<div style="background:rgba(255,255,255,0.96);color:#1A1A2E;font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.22);white-space:nowrap;font-family:Outfit,Arial,sans-serif;border:1.5px solid rgba(220,38,38,0.3);">${label}</div>`,
+        className:'', iconAnchor:[Math.round(lblW/2), 14]
+      }),
+      interactive:false, zIndexOffset:200
+    }).addTo(miniMap);
+    miniMarkers.push(bubble);
+
+    // Competitor name marker
+    const compMarker = L.marker([comp.lat, comp.lng], {
+      icon: makeSvgIcon(comp), zIndexOffset: comp.type==='sph-ref' ? 800 : 0
+    });
+    const tierLabel = comp.tier==='high'?'Premium':comp.tier==='mid'?'Mid-tier':'Budget';
+    compMarker.bindPopup(`
+      <div style="font-family:Outfit,Arial,sans-serif;min-width:180px;">
+        <div style="font-size:13px;font-weight:700;color:#111;margin-bottom:6px;">${comp.name}</div>
+        <div style="font-size:11px;color:#6B7280;">${comp.type==='sph-ref'?'SPH Campus':tierLabel} · ${comp.avgFee} jt avg</div>
+        <div style="font-size:11px;color:#0F4C8A;margin-top:4px;font-weight:700;">🚗 ${dist.toFixed(1)} km · ~${time} drive</div>
+      </div>`, {maxWidth:220, className:'sph-popup'});
+    compMarker.addTo(miniMap);
+    miniMarkers.push(compMarker);
+  });
+
+  // Fit bounds to visible markers for this campus+level
+  const allPts = [[campusData.lat, campusData.lng], ...comps.map(s => [s.lat, s.lng])];
+  if (allPts.length > 1) {
+    miniMap.fitBounds(allPts, {padding:[55, 65], maxZoom:13});
+  } else {
+    miniMap.setView([campusData.lat, campusData.lng], 13);
+  }
+
+  // Invalidate size after render (in case panel was hidden)
+  setTimeout(() => miniMap && miniMap.invalidateSize(), 150);
+}
+
+// ── LEADERBOARD ─────────────────────────────────────────────────────────────
+let lbSort = 'fee-desc';
+let lbPositionInst = null, lbSpreadInst = null;
+
+function setLbSort(s, btn) {
+  lbSort = s;
+  document.querySelectorAll('.lb-sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeaderboard();
+}
+
+function medalEmoji(rank) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return '';
+}
+
+function lbAccentColor(v, isSph) {
+  if (isSph) return 'var(--sph-dark)';
+  if (v == null) return '#E5E7EB';
+  if (v >= 300) return '#DC2626';
+  if (v >= 100) return '#D97706';
+  return '#16A34A';
+}
+
+function lbBarColor(v, isSph) {
+  if (isSph) return 'var(--sph-mid)';
+  if (v == null) return '#E5E7EB';
+  if (v >= 300) return '#FCA5A5';
+  if (v >= 100) return '#FCD34D';
+  return '#6EE7B7';
+}
+
+function renderLeaderboard() {
+  const d = DATA[campus][level];
+  const sphAvg = d.avgs[0];
+  const levelLabel = level === 'KINDY' ? 'Kindy' : level === 'JS' ? 'Junior School' : 'Mid–Senior';
+  document.getElementById('lb-context-pill').textContent = `${campus} · ${levelLabel} · 2027/28`;
+
+  // Build entries
+  let entries = d.schools.map((school, i) => ({
+    school,
+    avg: d.avgs[i],
+    isSph: i === 0,
+    delta: (d.avgs[i] != null && sphAvg != null && !( i === 0))
+      ? ((d.avgs[i] - sphAvg) / sphAvg * 100)
+      : null,
+  }));
+
+  // Sort
+  const validEntries = entries.filter(e => e.avg != null);
+  const naEntries = entries.filter(e => e.avg == null);
+
+  if (lbSort === 'fee-desc') validEntries.sort((a,b) => b.avg - a.avg);
+  else if (lbSort === 'fee-asc') validEntries.sort((a,b) => a.avg - b.avg);
+  else if (lbSort === 'delta-desc') validEntries.sort((a,b) => {
+    if (a.isSph) return -1; if (b.isSph) return 1;
+    return (b.delta??-999) - (a.delta??-999);
+  });
+  else if (lbSort === 'delta-asc') validEntries.sort((a,b) => {
+    if (a.isSph) return -1; if (b.isSph) return 1;
+    return (a.delta??999) - (b.delta??999);
+  });
+
+  const sorted = [...validEntries, ...naEntries];
+  const maxFee = Math.max(...sorted.map(e => e.avg || 0));
+
+  // Render rows
+  let html = '';
+  sorted.forEach((entry, idx) => {
+    const rank = idx + 1;
+    const medal = medalEmoji(rank);
+    const barWidth = entry.avg ? Math.round(entry.avg / maxFee * 100) : 0;
+    const barColor = lbBarColor(entry.avg, entry.isSph);
+    const accentColor = lbAccentColor(entry.avg, entry.isSph);
+
+    let deltaHtml = '';
+    if (entry.isSph) {
+      deltaHtml = `<span class="lb-delta lb-delta-eq">SPH</span>`;
+    } else if (entry.delta == null) {
+      deltaHtml = `<span class="lb-delta lb-delta-na">N/A</span>`;
+    } else {
+      const sign = entry.delta > 0 ? '+' : '';
+      const cls = entry.delta > 15 ? 'lb-delta-hi' : entry.delta > 0 ? 'lb-delta-mid' : 'lb-delta-lo';
+      deltaHtml = `<span class="lb-delta ${cls}">${sign}${entry.delta.toFixed(0)}%</span>`;
+    }
+
+    let tagHtml = '';
+    if (entry.isSph) tagHtml = `<span class="lb-tag lb-tag-sph">SPH ${campus}</span>`;
+    else if (entry.avg == null) tagHtml = `<span class="lb-tag" style="background:#F3F4F6;color:#9CA3AF;">No data</span>`;
+    else if (entry.avg >= 300) tagHtml = `<span class="lb-tag lb-tag-hi">Premium</span>`;
+    else if (entry.avg >= 100) tagHtml = `<span class="lb-tag lb-tag-mid">Mid-tier</span>`;
+    else tagHtml = `<span class="lb-tag lb-tag-lo">Budget</span>`;
+
+    const feeText = entry.avg != null ? `${entry.avg} jt` : 'N/A';
+    const animDelay = idx * 0.04;
+
+    html += `<div class="lb-row ${entry.isSph ? 'lb-sph' : ''}" style="--lb-accent:${accentColor};animation-delay:${animDelay}s;">
+      <div class="lb-rank">${medal || ('#' + rank)}</div>
+      <div class="lb-name">
+        <div class="lb-school">${entry.school}</div>
+        ${tagHtml}
+      </div>
+      <div class="lb-bar-wrap">
+        <div class="lb-bar-bg">
+          <div class="lb-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
+        </div>
+      </div>
+      <div class="lb-fee">${feeText}</div>
+      ${deltaHtml}
+    </div>`;
+  });
+
+  document.getElementById('lb-list').innerHTML = html;
+
+  // Re-render mini charts
+  renderLbPositionChart(sorted, sphAvg);
+  renderLbSpreadChart(sorted);
+}
+
+function renderLbPositionChart(sorted, sphAvg) {
+  const valid = sorted.filter(e => e.avg != null);
+  const labels = valid.map(e => e.school.length > 14 ? e.school.slice(0,13)+'…' : e.school);
+  const data = valid.map(e => e.avg);
+  const colors = valid.map(e => e.isSph ? 'rgba(15,76,138,0.9)' : e.avg >= 300 ? 'rgba(220,38,38,0.7)' : e.avg >= 100 ? 'rgba(217,119,6,0.7)' : 'rgba(22,163,74,0.7)');
+  const labelColors = valid.map(e => e.isSph ? '#0F4C8A' : e.avg >= 300 ? '#9B1C1C' : e.avg >= 100 ? '#6D4A00' : '#166534');
+
+  if (lbPositionInst) lbPositionInst.destroy();
+  lbPositionInst = new Chart(document.getElementById('lbPositionChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Avg fee (jt)',
+        data,
+        backgroundColor: colors,
+        borderRadius: 6,
+        datalabels: {
+          display: true,
+          anchor: 'end', align: 'end',
+          formatter: v => v != null ? Math.round(v) + ' jt' : '',
+          font: ctx => ({ size: valid[ctx.dataIndex]?.isSph ? 12 : 10, weight: '800' }),
+          color: ctx => labelColors[ctx.dataIndex] || '#6B7280',
+          offset: 4,
+          clip: false,
+          padding: { bottom: 2 }
+        }
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 28, right: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' Rp ' + ctx.parsed.y + ' jt' } },
+        datalabels: {}
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#9CA3AF', maxRotation: 45 } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { callback: v => v + 'jt', font: { size: 9 } }, border: { display: false } }
+      }
+    }
+  });
+}
+
+function renderLbSpreadChart(sorted) {
+  const valid = sorted.filter(e => e.avg != null && !e.isSph);
+  const sphEntry = sorted.find(e => e.isSph);
+  if (!valid.length || !sphEntry) return;
+
+  const sphFee = sphEntry.avg;
+
+  // Spread points vertically using deterministic jitter to avoid overlaps
+  const compData = valid.map((e, i) => ({ x: e.avg, y: (i % 7) + 1 }));
+  const compColors = valid.map(e => e.avg >= 300 ? 'rgba(220,38,38,0.75)' : e.avg >= 100 ? 'rgba(217,119,6,0.75)' : 'rgba(22,163,74,0.75)');
+  const compLabelColors = valid.map(e => e.avg >= 300 ? '#9B1C1C' : e.avg >= 100 ? '#6D4A00' : '#166534');
+
+  if (lbSpreadInst) lbSpreadInst.destroy();
+  lbSpreadInst = new Chart(document.getElementById('lbSpreadChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Competitors',
+          data: compData,
+          backgroundColor: compColors,
+          pointRadius: 7, pointHoverRadius: 10,
+          datalabels: {
+            display: true,
+            anchor: 'end',
+            align: ctx => {
+              // alternate above/below to reduce overlap
+              return ctx.dataIndex % 2 === 0 ? 'top' : 'bottom';
+            },
+            formatter: (val, ctx) => {
+              const e = valid[ctx.dataIndex];
+              if (!e) return '';
+              const short = e.school.length > 12 ? e.school.slice(0, 11) + '…' : e.school;
+              return short + '\n' + e.avg + ' jt';
+            },
+            font: { size: 9, weight: '600' },
+            color: ctx => compLabelColors[ctx.dataIndex] || '#6B7280',
+            offset: 4,
+            textAlign: 'center',
+            padding: 2
+          }
+        },
+        {
+          label: 'SPH ' + campus,
+          data: [{ x: sphFee, y: 4 }],
+          backgroundColor: 'rgba(15,76,138,1)',
+          pointRadius: 13, pointHoverRadius: 16,
+          pointStyle: 'rectRot',
+          datalabels: {
+            display: true, anchor: 'end', align: 'top',
+            formatter: () => 'SPH ' + campus + '\n' + sphFee + ' jt',
+            font: { size: 10, weight: '800' },
+            color: '#0F4C8A',
+            offset: 6,
+            textAlign: 'center'
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 40, bottom: 16, left: 8, right: 8 } },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 10, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const e = ctx.datasetIndex === 1 ? sphEntry : valid[ctx.dataIndex];
+              return ` ${e ? e.school : ''}: ${ctx.parsed.x} jt`;
+            }
+          }
+        },
+        datalabels: {}
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Annual fee (jt IDR)', font: { size: 10 }, color: '#9CA3AF' },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { callback: v => v + 'jt', font: { size: 9 }, color: '#9CA3AF' }
+        },
+        y: { display: false }
+      }
+    }
+  });
+}
+
+</script>
+</body>
+</html>
